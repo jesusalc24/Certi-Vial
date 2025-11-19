@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certi-Vial</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Certi-Vial">
+    <link rel="apple-touch-icon" href="icono-app.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        /* --- TEMA 3D DEEP GLASS --- */
+        :root {
+            --bg-base: #020005;
+            --bg-gradient: 
+                radial-gradient(at 0% 0%, rgba(120, 50, 255, 0.4) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(50, 200, 255, 0.3) 0px, transparent 50%);
+            
+            --primary: #d8b4fe; 
+            --secondary: #22d3ee;
+            --accent: #f472b6;
+            --text: #ffffff;
+            --text-dim: #94a3b8;
+            --error: #fb7185;
+            --success: #4ade80;
+        }
+
+        body {
+            margin: 0; font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-base);
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+            background-size: cover;
+            color: var(--text);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            /* Prevenir rebote elástico en iOS */
+            overscroll-behavior-y: none;
+        }
+
+        #app {
+            width: 100%; max-width: 600px;
+            min-height: 90vh;
+            background: rgba(20, 20, 30, 0.5);
+            backdrop-filter: blur(40px) saturate(150%);
+            -webkit-backdrop-filter: blur(40px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            box-shadow: 0 40px 80px -20px rgba(0,0,0,0.8);
+            display: flex; flex-direction: column;
+            margin: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header */
+        header {
+            padding: 30px 35px; 
+            display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            /* Ajuste para respetar el notch/isla dinámica del iPhone si es necesario */
+            padding-top: env(safe-area-inset-top, 30px); 
+        }
+        h1 { 
+            margin: 10px 0 0 0; font-size: 1.8rem; font-weight: 800; letter-spacing: -1px;
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        
+        /* Contenedor derecho (Reset + Timer) */
+        .header-right {
+            display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+        }
+
+        button.reset {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); 
+            color: var(--text-dim);
+            padding: 8px 16px; border-radius: 30px; cursor: pointer; transition: 0.3s;
+            font-weight: 600; font-size: 0.75rem; font-family: 'Outfit', sans-serif;
+            /* Evitar zoom al tocar en iOS */
+            touch-action: manipulation;
+        }
+        button.reset:hover { background: rgba(251, 113, 133, 0.15); color: #fff; border-color: var(--error); }
+
+        /* Estilo del Timer */
+        #timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--secondary);
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        #timer-display.active { opacity: 1; }
+        #timer-display.danger { color: var(--error); animation: pulse-text 1s infinite; }
+
+        @keyframes pulse-text { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .view { padding: 40px; display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .view.active { display: block; animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
+        /* --- INTERACCIÓN Y ANIMACIONES --- */
+        .spotlight {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.3s, border-color 0.3s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2); 
+            /* Desactivar resaltado gris al tocar en móviles */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .spotlight::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.1), transparent 40%);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1;
+        }
+        .spotlight:hover { border-color: rgba(255,255,255,0.2); }
+        .spotlight:hover::before { opacity: 1; }
+        .spotlight:active { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0); }
+
+        /* ANIMACIÓN DE SELECCIÓN DE CATEGORÍA */
+        .card-btn { padding: 30px; margin-bottom: 20px; display: flex; align-items: center; transition: 0.3s; }
+        
+        .card-selected {
+            background: rgba(74, 222, 128, 0.15) !important;
+            border-color: var(--success) !important;
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3) !important;
+            transform: scale(0.96) !important;
+        }
+
+        .card-btn h3 { margin: 0 0 5px 0; color: #fff; font-size: 1.3rem; font-weight: 700; }
+        .card-btn small { color: var(--text-dim); font-weight: 500; }
+        .card-icon { font-size: 3rem; margin-right: 25px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+
+        .action-btn {
+            width: 100%; padding: 25px; 
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); 
+            color: white; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;
+            font-size: 1rem; margin-top: 30px; text-align: center;
+            font-family: 'Outfit', sans-serif;
+            border-bottom: 4px solid rgba(0,0,0,0.3); 
+            touch-action: manipulation;
+        }
+        .action-btn.primary {
+            background: linear-gradient(135deg, rgba(192, 132, 252, 0.2), rgba(34, 211, 238, 0.1));
+            border: 1px solid rgba(192, 132, 252, 0.3);
+            border-bottom: 4px solid rgba(192, 132, 252, 0.3);
+        }
+
+        /* Niveles */
+        .lvl-row {
+            padding: 22px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+            border-radius: 20px; background: rgba(255,255,255,0.02); transition: 0.2s;
+        }
+        .lvl-row.unlocked:hover { background: rgba(255,255,255,0.05); transform: translateX(5px); }
+        .lvl-row.locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+        .badge { 
+            padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; 
+            background: #111; color: var(--text-dim); border: 1px solid #333;
+        }
+        .unlocked .badge { background: var(--primary); color: #000; border: none; box-shadow: 0 0 15px var(--primary); }
+
+        /* Estudio */
+        .study-scroll { display: flex; flex-direction: column; gap: 15px; max-height: 55vh; overflow-y: auto; padding-right: 10px; }
+        .study-card {
+            background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);
+            border-left: 3px solid var(--secondary); border-radius: 16px; padding: 25px;
+            animation: slideIn 0.4s ease-out forwards; opacity: 0; transform: translateX(-20px);
+        }
+        .study-q { color: var(--secondary); font-size: 0.8rem; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; }
+        .study-a { font-size: 1.1rem; color: #ddd; line-height: 1.5; font-weight: 300; }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        .study-card:nth-child(1) { animation-delay: 0.05s; }
+        .study-card:nth-child(2) { animation-delay: 0.1s; }
+        .study-card:nth-child(3) { animation-delay: 0.15s; }
+
+        /* Examen */
+        .progress { height: 6px; background: rgba(255,255,255,0.05); margin-bottom: 30px; border-radius: 10px; overflow: hidden; }
+        .bar { height: 100%; background: linear-gradient(90deg, var(--secondary), var(--primary)); width: 0%; transition: 0.8s ease; }
+        .q-box { min-height: 110px; margin-bottom: 30px; font-size: 1.4rem; line-height: 1.4; font-weight: 600; color:#fff; }
+        .opt-btn {
+            display: block; width: 100%; padding: 25px; margin-bottom: 15px;
+            text-align: left; font-size: 1.1rem; color: #ccc; font-family: 'Outfit', sans-serif;
+            touch-action: manipulation;
+        }
+        .opt-btn:hover { color: white; background: rgba(255,255,255,0.08); }
+        textarea {
+            width: 100%; height: 150px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+            color: white; padding: 20px; border-radius: 20px; font-size: 1.1rem; outline: none; font-family: inherit;
+        }
+
+        /* Micrófono */
+        .mic-btn {
+            width: 90px; height: 90px; background: rgba(255,255,255,0.05); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 2.5rem; margin: 0 auto 20px; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mic-btn:hover { border-color: var(--primary); box-shadow: 0 0 30px var(--primary); transform: scale(1.1); }
+        .mic-btn.recording { background: rgba(251, 113, 133, 0.2); border-color: var(--error); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* Resultados */
+        .score-display { font-size: 6rem; text-align: center; font-weight: 900; margin: 20px 0; letter-spacing: -3px; }
+        .cert {
+            border: 1px solid rgba(255,255,255,0.1); padding: 40px; margin-top: 30px;
+            background: #fff; color: #000; position: relative; text-align: center;
+            border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .stamp {
+            position: absolute; top: 20px; right: 20px; border: 4px solid #d32f2f; color: #d32f2f;
+            padding: 5px 15px; border-radius: 10px; font-weight: 900; transform: rotate(-15deg);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        #crash-screen { display: none; background: #2a0a18; color: #ff99aa; padding: 30px; position: fixed; top:0; left:0; width:100%; height:100%; z-index:9999; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header>
+        <h1>Certi-Vial</h1>
+        <div class="header-right">
+            <button class="reset" onclick="app.reset()">⟳ Reiniciar</button>
+            <div id="timer-display">15:00</div>
+        </div>
+    </header>
+
+    <div id="v-home" class="view active">
+        <p style="text-align:center; color:var(--text-dim); margin-bottom:40px; font-size:1.1rem;">Seleccione su categoría:</p>
+        <div class="card-btn spotlight" onclick="app.setCat('A-I', this)">
+            <div class="card-icon">🚗</div>
+            <div><h3>Vehículo Particular</h3><small>Categoría A-I</small></div>
+        </div>
+        <div class="card-btn spotlight" onclick="app.setCat('B-IIc', this)">
+            <div class="card-icon">🛺</div>
+            <div><h3>Mototaxi</h3><small>Categoría B-IIc</small></div>
+        </div>
+    </div>
+
+    <div id="v-levels" class="view">
+        <div style="display:flex; justify-content:space-between; margin-bottom:30px; align-items:center;">
+            <h3 style="margin:0; font-size:1.5rem;">Niveles</h3>
+            <span id="cat-lbl" style="color:var(--primary); font-weight:bold; background:rgba(255,255,255,0.05); padding:8px 16px; border-radius:12px;">CAT</span>
+        </div>
+        <div id="lvl-list"></div>
+        <button class="action-btn spotlight" onclick="app.nav('v-home')">Volver al Inicio</button>
+    </div>
+
+    <div id="v-study" class="view">
+        <h3 style="text-align:center; margin:0; color:var(--secondary); letter-spacing:2px; font-size:0.9rem;">PREPARACIÓN</h3>
+        <p style="text-align:center; color:var(--text-dim); font-size:1.2rem; margin-bottom:30px; font-weight:300;">Micro-Sesión de Estudio</p>
+        
+        <div id="study-container" class="study-scroll"></div>
+
+        <button class="action-btn spotlight primary" onclick="app.startExam()">¡Estoy Listo!</button>
+    </div>
+
+    <div id="v-exam" class="view">
+        <div class="progress"><div id="bar" class="bar"></div></div>
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:var(--text-dim); margin-bottom:15px; text-transform:uppercase; font-weight:700; letter-spacing:1px;">
+            <span id="ex-name">Nivel</span>
+            <span id="ex-count">0/0</span>
+        </div>
+        <div id="q-text" class="q-box">Pregunta...</div>
+        <div id="q-area"></div>
+    </div>
+
+    <div id="v-result" class="view">
+        <h2 style="text-align:center; margin-top:0; color:var(--text);">Resultados</h2>
+        <div id="res-val" class="score-display">0</div>
+        <p id="res-msg" style="text-align:center; color:var(--text-dim); margin-bottom:30px; font-size:1.2rem;"></p>
+
+        <div id="cert" class="cert" style="display:none">
+            <div class="stamp">APROBADO</div>
+            <h2 style="margin:0 0 20px 0; letter-spacing:3px;">CERTIFICADO</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left; border-top:2px dashed #999; padding-top:20px;">
+                <p style="margin:5px 0"><strong>Categoría:</strong> <span id="c-cat">A</span></p>
+                <p style="margin:5px 0"><strong>Nivel:</strong> <span id="c-lvl">1</span></p>
+                <p style="margin:5px 0; grid-column:span 2; font-size:1.2rem;"><strong>Nota:</strong> <span id="c-note" style="font-weight:900">OK</span></p>
+            </div>
+        </div>
+        <button class="action-btn spotlight primary" onclick="app.nav('v-levels'); app.renderLvl()">Continuar</button>
+    </div>
+</div>
+
+<script>
+window.onerror = function(msg, url, line) {
+    document.getElementById('crash-screen').style.display = 'block';
+    document.getElementById('error-detail').innerText = `${msg}\nLínea: ${line}`;
+    document.getElementById('app').style.display = 'none';
+};
+
+const DB = {
+    'A1': [
+        { q: "1. Según el Manual de Dispositivos, ¿qué forma tiene exclusivamente la señal reglamentaria R-1 'PARE'?", opts: ["Circular", "Octogonal (8 lados)", "Triangular", "Rectangular"], a: 1, learn: "🛑 **Forma Única:** El PARE es la única señal con 8 lados (octógono) para ser reconocida incluso de espaldas." },
+        { q: "2. Según el RNV, ¿a qué categoría pertenecen los vehículos de pasajeros de 4 ruedas o más?", opts: ["Categoría L", "Categoría N", "Categoría O", "Categoría M"], a: 3, learn: "🚗 **Categoría M:** 'M' de 'Movimiento de personas'. Autos y buses son M. Carga es N, Motos son L." },
+        { q: "3. Según el Reglamento de Licencias, ¿cuál es la vigencia de la Licencia A-I si no tiene infracciones?", opts: ["2 años", "5 años", "8 años", "10 años"], a: 3, learn: "📅 **Vigencia:** Si eres un conductor ejemplar sin multas, tu licencia A-I te dura una década completa." },
+        { q: "4. En el semáforo vehicular, ¿qué indica la luz roja fija?", opts: ["Precaución", "Los vehículos deben detenerse", "Girar con cuidado", "Avanzar"], a: 1, learn: "🔴 **Rojo Fijo:** Significa peligro y detención absoluta. No cruces la línea de parada." },
+        { q: "5. Según el RENAT, ¿qué documento acredita la habilitación para prestar servicio de transporte?", opts: ["Licencia de Conducir", "DNI", "Tarjeta Única de Circulación (TUC)", "Factura"], a: 2, learn: "📄 **Habilitación:** La TUC (Tarjeta Única de Circulación) es el DNI del vehículo para trabajar legalmente." },
+        { q: "6. Según el Manual, las señales de color AMARILLO con símbolos negros sirven para:", opts: ["Prohibir (Reglamentarias)", "Informar (Informativas)", "Advertir peligros (Preventivas)", "Zonas turísticas"], a: 2, learn: "⚠️ **Alerta:** El color amarillo siempre te advierte de un peligro potencial más adelante (Curvas, cruces, etc.)." },
+        { q: "7. Según el RNV, ¿a qué categoría pertenecen los vehículos de 2 o 3 ruedas (motos/mototaxis)?", opts: ["Categoría M", "Categoría L", "Categoría N", "Categoría O"], a: 1, learn: "🏍️ **Ligeros:** Las motos y mototaxis pertenecen a la categoría 'L' (Vehículos menores)." },
+        { q: "8. Edad mínima para obtener licencia A-I por otorgamiento directo:", opts: ["16 años", "21 años", "18 años", "20 años"], a: 2, learn: "🎂 **Mayoría de Edad:** Para la licencia particular (A-I) debes tener 18 años cumplidos." },
+        { q: "9. Según el Manual, ¿qué forma tiene la señal R-2 'CEDA EL PASO'?", opts: ["Círculo rojo", "Triángulo equilátero invertido", "Octágono", "Rombo"], a: 1, learn: "🔻 **Prioridad:** El triángulo invertido te dice 'Cede el Paso'. Baja la velocidad y para si es necesario." },
+        { q: "10. Según el RENAT, jornada máxima de conducción continua en servicio DIURNO:", opts: ["4 horas", "8 horas", "5 horas", "6 horas"], a: 2, learn: "☀️ **Jornada Diurna:** De día, el máximo continuo al volante son 5 horas. De noche baja a 4." },
+        { q: "11. Elemento de seguridad obligatorio para TODOS los ocupantes de un M1 (auto):", opts: ["Casco", "Cinturón de seguridad", "Extintor", "Botiquín"], a: 1, learn: "🔒 **Vida:** El cinturón de seguridad es obligatorio para TODOS los asientos, no solo el chofer." },
+        { q: "12. ¿Qué indica una línea central CONTINUA de color amarillo?", opts: ["Se puede adelantar", "Carril buses", "Prohibido cruzar/adelantar", "Estacionar"], a: 2, learn: "🚧 **Muro:** La línea amarilla continua es una pared virtual. Prohibido adelantar o invadir el carril contrario." },
+        { q: "13. Licencia necesaria para conducir vehículos menores (motos/mototaxis):", opts: ["Clase A", "Clase B", "Clase C", "Clase M"], a: 1, learn: "🛺 **Clasificación:** Clase A es para carros/camiones. Clase B es exclusiva para motos y mototaxis." },
+        { q: "14. Color de fondo de señales en zonas de trabajo (construcción):", opts: ["Amarillo", "Naranja", "Verde", "Rojo"], a: 1, learn: "🟠 **Obras:** El color naranja indica construcción o mantenimiento en la vía. Reduce velocidad." },
+        { q: "15. Según el RNV, la Categoría N es para vehículos de transporte de:", opts: ["Pasajeros", "Mercancías (Carga)", "Motocicletas", "Remolques"], a: 1, learn: "🚚 **Carga:** La categoría 'N' es para transporte de mercancías (camiones, furgones)." },
+        { q: "16. Seguro obligatorio para cubrir daños personales en accidentes:", opts: ["Seguro robos", "Seguro vida", "SOAT", "Seguro privado"], a: 2, learn: "🏥 **Cobertura:** El SOAT cubre muerte y lesiones de todas las víctimas, ocupantes o peatones." },
+        { q: "17. Color de fondo de señales informativas de servicios generales:", opts: ["Azul", "Verde", "Blanco", "Marrón"], a: 0, learn: "⛽ **Servicios:** El fondo AZUL te informa sobre grifos, hoteles, restaurantes o auxilios." },
+        { q: "18. ¿Qué significa la sigla VIN?", opts: ["Vehículo Industria Nacional", "Valor Interno", "Número de Identificación Vehicular", "Verificación"], a: 2, learn: "🔢 **Huella Digital:** El VIN es el número de serie único que identifica a tu vehículo a nivel mundial." },
+        { q: "19. Validez del certificado de salud para licencias:", opts: ["Solo distrito", "Solo Lima", "A nivel nacional", "Solo región"], a: 2, learn: "🇵🇪 **Alcance:** Tu examen médico vale en todo el Perú, no importa dónde lo sacaste." },
+        { q: "20. ¿Qué significan las flechas pintadas en el pavimento?", opts: ["Adorno", "Dirección obligatoria/permitida", "Estacionar", "Velocidad"], a: 1, learn: "⬇️ **Guiado:** Las flechas en el piso te obligan a seguir esa dirección (seguir recto, voltear, etc.)." }
+    ],
+    'A2': [
+        { q: "1. Intersección sin semáforo con señal CEDA EL PASO (R-2):", opts: ["Tocar claxon", "Detenerse obligatoriamente", "Disminuir/Detenerse si es necesario", "Acelerar"], a: 2, learn: "🔽 **Ceda el Paso:** A diferencia del PARE, aquí no estás obligado a detenerte si no viene nadie." },
+        { q: "2. Límite máximo velocidad en CALLES de zona urbana:", opts: ["30 km/h", "40 km/h", "50 km/h", "60 km/h"], a: 0, learn: "🏠 **Calles:** La nueva normativa redujo la velocidad máxima en calles a 30 km/h (antes 40)." },
+        { q: "3. Línea central amarilla DISCONTINUA (segmentada):", opts: ["Un solo sentido", "Prohibido adelantar", "Doble sentido/Permite adelantar", "Estacionamiento"], a: 2, learn: "🟡 **Doble Sentido:** La línea amarilla divide el tráfico opuesto. Si es discontinua, puedes adelantar." },
+        { q: "4. Conducir sin lentes si la licencia lo exige (Restricción):", opts: ["Nada si es día", "Falta leve", "Infracción Grave (G.19)", "Solo ponerse"], a: 2, learn: "👓 **Obligación:** No usar lentes correctores es una infracción Grave (G.19) y conlleva multa." },
+        { q: "5. Prioridad de paso en una rotonda (óvalo):", opts: ["El que ingresa", "El más rápido", "El que circula DENTRO", "Transporte público"], a: 2, learn: "🔄 **Regla de Oro:** En el óvalo, el que ya está adentro tiene la preferencia sobre el que quiere entrar." },
+        { q: "6. Profundidad mínima surcos neumáticos automóvil (M1):", opts: ["1.0 mm", "1.6 mm", "2.0 mm", "3.0 mm"], a: 1, learn: "📏 **Seguridad:** Para autos particulares, la ley exige una cocada mínima de 1.6 mm." },
+        { q: "7. Significado luz INTERMITENTE ROJA en semáforo:", opts: ["Malogrado", "Equivale a PARE", "Equivale a CEDA EL PASO", "Esperar verde"], a: 1, learn: "🛑 **Alto Total:** El rojo intermitente es igual a una señal de PARE. Detente, mira y avanza." },
+        { q: "8. Distancia mínima para estacionar de una esquina/intersección:", opts: ["3 metros", "5 metros", "6 metros", "10 metros"], a: 3, learn: "📐 **Visibilidad:** Debes dejar 10 metros libres desde la esquina para no tapar la visión del cruce." },
+        { q: "9. Documento obligatorio vehículo > 4 años antigüedad:", opts: ["Factura", "CITV (Revisión Técnica)", "Manual usuario", "Seguro robos"], a: 1, learn: "🔧 **Estado:** A partir del 4to año, todo auto particular debe tener su Certificado de Inspección Técnica." },
+        { q: "10. Encuentro con vehículo de emergencia (luces/sirena):", opts: ["Acelerar", "Mantener", "Derecha y detenerse", "Claxon"], a: 2, learn: "🚑 **Paso:** Siempre muévete a la derecha y detente para dejar pasar a ambulancias o bomberos." },
+        { q: "11. Señal vertical P-33A (triángulo amarillo con 'joroba'):", opts: ["Puente", "Reductor de velocidad (Rompemuelles)", "Resbaladizo", "Derrumbes"], a: 1, learn: "🚧 **Aviso:** Esa 'joroba' te advierte que viene un rompemuelles. ¡Baja la velocidad!" },
+        { q: "12. Carril para adelantar en vía de 3 carriles (mismo sentido):", opts: ["Cualquiera", "Derecha", "Centro", "Extremo Izquierdo"], a: 3, learn: "⬅️ **Orden:** El carril izquierdo es el más rápido y exclusivo para adelantar." },
+        { q: "13. Vigencia licencia A-I tras inhabilitación temporal:", opts: ["8 años", "5 años", "3 años", "2 años"], a: 1, learn: "📉 **Penalidad:** Si te sancionaron con suspensión, tu próxima licencia solo durará 5 años." },
+        { q: "14. Señal círculo rojo con 'E' tachada:", opts: ["Permitido", "Exclusivo", "Prohibido Estacionar", "Prohibido Detenerse"], a: 2, learn: "🚫 **Estacionamiento:** La E tachada significa 'No Estacionar', pero sí puedes detenerte brevemente a dejar pasajeros." },
+        { q: "15. Tasa de alcohol permitida transporte público/taxi:", opts: ["0.50 g/l", "0.25 g/l", "0.10 g/l", "0.00 g/l"], a: 3, learn: "🍷 **Tolerancia Cero:** Si llevas pasajeros (servicio público), no puedes tener ni una gota de alcohol." },
+        { q: "16. Preferencia en intersección NO semaforizada:", opts: ["Llega primero", "Viene por DERECHA", "Viene por izquierda", "El grande"], a: 1, learn: "👉 **Regla General:** Si no hay señales, cede el paso al vehículo que aparece por tu mano derecha." },
+        { q: "17. Uso de bocina (claxon) para apurar:", opts: ["Sí, agilizar", "Sí, hora punta", "No, prohibido (solo peligro)", "Sí, corto"], a: 2, learn: "📢 **Ruido:** El claxon es solo para evitar accidentes, no para descargar tu estrés o apurar." },
+        { q: "18. Línea de borde de calzada AMARILLA continua:", opts: ["Estacionar berma", "Doble sentido", "Prohibido estacionar/detenerse", "Escolar"], a: 2, learn: "⛔ **Restricción Total:** Borde amarillo significa que está prohibido estacionar y también detenerse." },
+        { q: "19. Sanción por conducir sin SOAT vigente:", opts: ["Solo multa", "Multa + Retención vehículo", "Amonestación", "Retención licencia"], a: 1, learn: "🛑 **Grave:** Sin SOAT, tu auto se va al depósito y tú te llevas una multa fuerte." },
+        { q: "20. Señal P-48 (Rombo amarillo con silueta caminando):", opts: ["Escolar", "Prohibido peatones", "Presencia de Peatones", "Paradero"], a: 2, learn: "🚶 **Atención:** Advierte que es probable que crucen peatones en la zona próxima." }
+    ],
+    'B1': [
+        { q: "1. Conducta ante luz intermitente ÁMBAR (amarilla):", opts: ["Detenerse como luz roja", "Disminuir/Precaución", "Acelerar para despejar", "Esperar verde fijo"], a: 1, learn: "⚠️ **Precaución:** El ámbar intermitente no te obliga a parar, pero sí a reducir velocidad y cruzar con mucho cuidado." },
+        { q: "2. Vigencia A-I tras inhabilitación temporal:", opts: ["8 años", "5 años", "3 años", "2 años"], a: 1, learn: "📉 **Castigo:** Si te inhabilitaron temporalmente, tu próxima licencia A-I durará solo la mitad (5 años) en lugar de 10." },
+        { q: "3. Elemento de seguridad obligatorio M1 (además de rueda):", opts: ["Galón de agua", "Gata/Llave/Triángulo", "Soga remolque", "Cables corriente"], a: 1, learn: "🔧 **Kit Básico:** Es obligatorio llevar gata, llave de ruedas y triángulo para emergencias en la vía." },
+        { q: "4. Línea de borde de calzada AMARILLA continua:", opts: ["Estacionar en berma", "Doble sentido", "Prohibido estacionar", "Zona neblina"], a: 2, learn: "🚫 **Prohibición:** Si el borde es amarillo, ¡ni se te ocurra estacionar! Es una zona restringida." },
+        { q: "5. Conducir con lunas polarizadas sin permiso:", opts: ["No es infracción día", "Infracción Reglamento Tránsito", "Infracción administrativa", "Advertencia verbal"], a: 1, learn: "👮 **Infracción:** El polarizado sin permiso es una falta grave al Reglamento Nacional de Tránsito." },
+        { q: "6. Significado señal R-4 (Círculo rojo con barra horizontal):", opts: ["Prohibido estacionar", "NO ENTRE (Ingreso prohibido)", "Aduana", "Calle sin salida"], a: 1, learn: "⛔ **Acceso:** La señal R-4 te grita '¡Por aquí NO!'. Prohíbe entrar en esa dirección." },
+        { q: "7. Vigencia Certificado de Salud para revalidar A-I:", opts: ["15 días", "30 días", "6 meses", "1 año"], a: 2, learn: "🩺 **Validez Médica:** Tu examen médico sirve por 6 meses para completar el trámite." },
+        { q: "8. Categoría de camioneta Pick-up < 3.5t:", opts: ["M1", "M2", "N1", "N2"], a: 2, learn: "🚛 **Carga Ligera:** Las pick-up son vehículos de carga (N) ligeros (1), por eso son N1." },
+        { q: "9. Distancia aproximada señal P-33A (Resalto):", opts: ["Ahí mismo", "60m antes", "500m", "10m"], a: 1, learn: "🚧 **Anticipación:** La señal te avisa con tiempo (mínimo 60m) para que frenes antes del rompemuelles." },
+        { q: "10. ¿Niño < 5 años en asiento copiloto?:", opts: ["Sí con cinturón", "Sí cargado", "No, atrás obligatorio", "Sí con airbag"], a: 2, learn: "👶 **Seguridad Infantil:** Los niños pequeños son frágiles. Por ley, siempre deben ir atrás." },
+        { q: "11. Señal 'X' blanca 'FERROCARRIL' (P-44):", opts: ["Cruce peatones", "Obras", "Cruce ferroviario a nivel", "Intersección avenidas"], a: 2, learn: "🚂 **Tren:** La Cruz de San Andrés avisa que vas a cruzar una vía de tren al mismo nivel." },
+        { q: "12. Cambio de motor a otro combustible (gasolina -> GLP):", opts: ["Nada", "Cambio TIV + Certificado", "Solo revisión técnica", "Avisar policía"], a: 1, learn: "📝 **Registros:** Si cambias el 'corazón' o la 'sangre' del auto, debes actualizar la Tarjeta de Propiedad." },
+        { q: "13. Señal R-18 (Camiones derecha) en vía de 3 carriles:", opts: ["Cualquiera", "Izquierdo", "Exclusivamente derecho", "Central"], a: 2, learn: "🚚 **Orden:** Los pesados son lentos, así que deben mantenerse obligatoriamente a la derecha." },
+        { q: "14. Edad máxima licencia profesional (A-II en adelante):", opts: ["70 años", "75 años", "80 años", "No hay límite"], a: 2, learn: "👴 **Límite:** A los 80 años se termina la carrera de conductor profesional por seguridad." },
+        { q: "15. 'Malla Ortogonal' (cuadrícula amarilla) en intersección:", opts: ["Zona peatonal", "No bloquear cruce", "Paradero taxis", "Estacionamiento emergencia"], a: 1, learn: "❌ **No Bloquear:** ¡El suelo es lava! Nunca te detengas dentro de la cuadrícula amarilla." },
+        { q: "16. ¿Conducir con A-I vencida en trámite?:", opts: ["Sí con constancia", "Sí 30 días gracia", "No, prohibido", "Sí en distrito"], a: 2, learn: "🚫 **Vencida es Vencida:** No hay permisos especiales. Si caducó, no manejas hasta tener la nueva." },
+        { q: "17. Señal I-19 (Cuadrado azul surtidor):", opts: ["Prohibido estacionar", "Grifo próximo", "Peligro incendio", "Mecánico"], a: 1, learn: "⛽ **Servicios:** El surtidor azul te avisa que hay una estación de gasolina cerca." },
+        { q: "18. Profundidad mínima neumáticos M1 (auto):", opts: ["1.0 mm", "1.6 mm", "2.0 mm", "3.0 mm"], a: 1, learn: "📏 **Llantas:** Para autos (M1), la ley exige al menos 1.6mm de cocada para tener agarre." },
+        { q: "19. Límite máx zona escolar (Reglamento Tránsito):", opts: ["20 km/h", "30 km/h", "35 km/h", "40 km/h"], a: 1, learn: "🏫 **Despacio:** En zona escolar, la regla general es 30 km/h para proteger a los estudiantes." },
+        { q: "20. Sanción por negarse a alcoholemia (A-I):", opts: ["Multa simple", "Presunción + Susp/Cancela + Multa", "Amonestación", "Solo retención"], a: 1, learn: "🍷 **Muy Grave:** Negarte es confesar. Te suspenden o cancelan la licencia y te multan fuerte." },
+        { q: "21. Explique conducta ante señal CEDA EL PASO:", type: "TEXT", key: ["disminuir", "detenerse", "ceder", "preferencia"], learn: "▼ **Ceda el Paso:** No siempre paras, pero debes bajar la velocidad y dejar pasar a quien tenga preferencia." },
+        { q: "22. ¿Vigencia y alcance del certificado de salud?", type: "TEXT", key: ["6 meses", "seis meses", "nacional"], learn: "🌍 **Validez:** El examen médico vale por 6 meses y sirve en todo el Perú." }
+    ],
+    'B2': [
+        { q: "1. Significado 'Rejilla/Malla Ortogonal' (Caja Amarilla) en cruce:", opts: ["Estacionamiento", "No bloquear cruce", "Diagonal peatonal", "Parada bus"], a: 1, learn: "❌ **Zona Prohibida:** Nunca te detengas encima. Si no tienes espacio para cruzar, espera detrás de la línea." },
+        { q: "2. ¿Con A-I puedo conducir moto (L3)?", opts: ["Sí, cubre todo", "Sí, si es automática", "No, requiere Clase B", "Sí particular"], a: 2, learn: "🏍️ **Especialización:** La A-I es para autos (4 ruedas). Para motos (2 o 3 ruedas) necesitas licencia Clase B." },
+        { q: "3. Primera Inspección Técnica (CITV) para auto nuevo (M1):", opts: ["Inmediata", "2do año", "4to año", "3er año"], a: 2, learn: "🆕 **Exoneración:** Los autos particulares nuevos están libres de revisión técnica durante sus primeros 4 años." },
+        { q: "4. Intersección sin semáforo: ¿Quién tiene preferencia?", opts: ["Usted (izquierda)", "El más rápido", "El de la derecha", "El grande"], a: 2, learn: "👉 **Derecha Manda:** En cruces no regulados, la prioridad SIEMPRE la tiene quien aparece por tu derecha." },
+        { q: "5. Función del carril de aceleración en autopista:", opts: ["Estacionar", "Incorporarse con velocidad", "Emergencia", "Adelantar"], a: 1, learn: "🚀 **Impulso:** Sirve para igualar la velocidad de los que ya van en la autopista antes de entrar." },
+        { q: "6. Sanción por conducir con licencia vencida (M.40):", opts: ["Amonestación", "Multa + Retención", "Cancelación", "Nada si revalida"], a: 1, learn: "🚫 **Sin Licencia:** Manejar con el brevete vencido es como manejar sin él: Multa y se llevan el auto." },
+        { q: "7. Límite máximo velocidad auto (A-I) en carreteras:", opts: ["80 km/h", "90 km/h", "100 km/h", "120 km/h"], a: 2, learn: "🛣️ **Tope:** En carretera abierta, un auto particular puede ir hasta 100 km/h (si no hay señal que diga menos)." },
+        { q: "8. Policía dice PASE pero semáforo está en ROJO:", opts: ["Semáforo manda", "Policía manda (avanzar)", "Esperar verde", "Preguntar"], a: 1, learn: "👮 **Jerarquía:** La orden del Policía siempre está por encima del semáforo y las señales." },
+        { q: "9. Vigencia Certificado Salud para trámite licencia:", opts: ["15 días", "6 meses", "1 año", "Indefinido"], a: 1, learn: "🩺 **Tiempo:** Tienes 6 meses desde que te dan el apto médico para terminar tus exámenes y trámites." },
+        { q: "10. Distancia mínima estacionar de un grifo/hidrante:", opts: ["1 metro", "3 metros", "5 metros", "10 metros"], a: 2, learn: "🚒 **Emergencia:** Deja 5 metros libres alrededor de los hidrantes para que los bomberos puedan trabajar." },
+        { q: "11. Significado líneas blancas discontinuas:", opts: ["No adelantar", "Opuestos", "Mismo sentido/Permite cruzar", "Estacionamiento"], a: 2, learn: "⚪ **Permiso:** Si la línea es segmentada (a trozos), puedes cambiar de carril o adelantar con cuidado." },
+        { q: "12. Fuga en accidente: ¿Quién cubre al peatón?", opts: ["Nadie", "SIS", "Fondo de Compensación SOAT", "Municipio"], a: 2, learn: "🏥 **Fondo:** Si el chofer huye, existe un Fondo del MTC que cubre los gastos médicos de las víctimas." },
+        { q: "13. Profundidad mínima surco llanta auto (M1):", opts: ["0.5 mm", "1.6 mm", "3.0 mm", "5.0 mm"], a: 1, learn: "🌧️ **Aquaplaning:** Necesitas mínimo 1.6mm de dibujo para que la llanta pueda evacuar agua y no patinar." },
+        { q: "14. ¿Neblineros en ciudad sin niebla?:", opts: ["Sí, estética", "Sí, baches", "Prohibido (deslumbran)", "Solo traseras"], a: 2, learn: "💡 **Respeto:** Los neblineros son muy fuertes. Usarlos sin niebla ciega a los demás conductores." },
+        { q: "15. Adelantar vehículo averiado pisando continua:", opts: ["Nunca", "Excepcionalmente (seguridad)", "Rápido", "Solo con policía"], a: 1, learn: "⚠️ **Excepción:** Si hay un obstáculo inmóvil, puedes rebasarlo con cuidado aunque haya línea continua." },
+        { q: "16. Puntos perdidos por infracción LEVE:", opts: ["1-20 puntos", "30 puntos", "50 puntos", "No restan puntos"], a: 0, learn: "📉 **Acumulación:** Las faltas leves suman entre 1 y 20 puntos en contra en tu récord." },
+        { q: "17. Documento estado mecánico (auto antiguo):", opts: ["Factura taller", "CITV (Revisión Técnica)", "Tarjeta Propiedad", "Manual"], a: 1, learn: "🔧 **Certificado:** La única prueba válida para la policía de que tu auto funciona bien es el CITV vigente." },
+        { q: "18. ¿Neutro en bajada para ahorrar?:", opts: ["Sí, ahorra", "Prohibido/Peligroso", "Sí con freno", "Solo recta"], a: 1, learn: "🛑 **Peligro:** ¡Jamás! En neutro el auto se embala y pierdes el control. Baja siempre enganchado en cambio." },
+        { q: "19. Señal vertical color MARRÓN:", opts: ["Turística/Arqueológica", "Escolar", "Mecánico", "Destino"], a: 0, learn: "🏺 **Turismo:** El color marrón en señales es exclusivo para lugares de interés turístico o histórico." },
+        { q: "20. Conducir sin lentes (si la licencia lo exige):", opts: ["Nada", "Educativa", "Infracción Grave (G.19)", "Ponerse"], a: 2, learn: "👓 **Restricción:** Si tu licencia dice 'Lentes', es OBLIGATORIO usarlos. No hacerlo es una falta Grave." },
+        { q: "21. Explique 'No bloquear cruce':", type: "TEXT", key: ["malla", "amarillo", "bloquear", "detener", "intersección"], learn: "❌ **Bloqueo:** Nunca entres a una intersección si no tienes espacio libre para salir al otro lado." },
+        { q: "22. Vigencia revalidación (plazos):", type: "TEXT", key: ["10", "8", "5"], learn: "📅 **Plazos:** A-I (10 años), Profesionales (3 años). La vigencia baja si tienes sanciones." },
+        { q: "23. GNV/GLP Documento (Oral):", type: "AUDIO", key: ["certificado", "conformidad"], learn: "🔊 **Oral:** Mencione el documento que avala el cambio de combustible." },
+        { q: "24. Señal Chevron (Oral):", type: "AUDIO", key: ["curva", "guiar"], learn: "🔊 **Oral:** Describa la función de los delineadores de curva." }
+    ],
+    'C1': [
+        { q: "1. Edad máxima para ser titular de licencia profesional:", opts: ["70 años", "75 años", "65 años", "No existe límite", "80 años"], a: 4, learn: "👴 **Límite:** La edad máxima absoluta para tener licencia profesional (A-II, A-III) es de 80 años." },
+        { q: "2. Tolerancia en control de peso por eje (pesaje dinámico):", opts: ["5%", "3%", "8%", "10%", "No existe tolerancia"], a: 1, learn: "⚖️ **Balanzas Dinámicas:** Al pesar vehículos en movimiento, se permite un error del 3%." },
+        { q: "3. Color de fondo para señales informativas de turismo/historia:", opts: ["Azul", "Verde", "Blanco", "Marrón (Café)", "Naranja"], a: 3, learn: "🏺 **Turismo:** Las señales que guían a museos, ruinas o parques siempre tienen fondo MARRÓN." },
+        { q: "4. Jornada máxima de conducción continua en servicio nocturno:", opts: ["5 horas", "4 horas", "6 horas", "3 horas", "10 horas"], a: 1, learn: "🌙 **Fatiga:** De noche el riesgo aumenta, por lo que solo se permite conducir 4 horas seguidas (vs 5 de día)." },
+        { q: "5. Longitud máxima para ómnibus de 2 o 3 ejes:", opts: ["12.00 m", "14.00 m", "13.20 m", "15.00 m", "12.60 m"], a: 2, learn: "🚌 **Dimensiones:** El largo máximo estándar para buses de 2 o 3 ejes es de 13.20 metros." },
+        { q: "6. Vigencia de licencia A-IIb revalidada tras sanción MUY GRAVE:", opts: ["3 años", "5 años", "4 años", "1 año", "2 años"], a: 4, learn: "📉 **Castigo:** Una falta Muy Grave reduce drásticamente la vigencia de tu próxima licencia a solo 2 años." },
+        { q: "7. Forma y color de señal preventiva P-49 'Zona Escolar':", opts: ["Pentagonal/Amarillo Limón", "Romboidal/Amarillo", "Rectangular/Blanco", "Circular/Rojo", "Romboidal/Naranja"], a: 0, learn: "🏫 **Única:** La señal de escuela es la única con forma de casita (pentágono) y color amarillo limón." },
+        { q: "8. Definición técnica de 'Área Saturada' (RENAT):", opts: ["Paraderos informales", "Vel < 10km/h", ">1000 veh/h", "Contaminación/Congestión", "Zona comercial"], a: 3, learn: "🌫️ **Saturación:** Se declara saturada una zona cuando la congestión o el humo afectan la calidad de vida." },
+        { q: "9. ¿Qué define a la Categoría O4?", opts: ["Remolque <0.75t", "Remolque >10t", "Pasajeros 4 ruedas", "Carga >12t", "Remolque 3.5-10t"], a: 1, learn: "🚛 **Remolques:** La categoría O es para remolques. O4 son los más pesados (más de 10 toneladas)." },
+        { q: "10. Significado de línea central amarilla continua doble:", opts: ["Separación mismo sentido", "Adelantamiento", "Opuestos/Prohibido adelantar", "Reversible", "Borde"], a: 2, learn: "🚧 **Muro:** La doble línea amarilla es una pared virtual. Separa sentidos opuestos y NUNCA se cruza." },
+        { q: "11. Autoridad competente para licencias Clase B (motos):", opts: ["MTC", "Gobierno Regional", "PNP", "Touring", "Municipalidad Provincial"], a: 4, learn: "🛵 **Jurisdicción:** Las licencias de moto y mototaxi las emiten exclusivamente las Municipalidades Provinciales." },
+        { q: "12. Profundidad mínima de neumáticos M3 o N3:", opts: ["2.0 mm", "1.6 mm", "3.0 mm", "1.0 mm", "1.5 mm"], a: 0, learn: "🚚 **Agarre:** Buses y camiones necesitan más profundidad de cocada (2.0 mm) que los autos (1.6 mm)." },
+        { q: "13. Ámbito territorial del Servicio de Auto Colectivo:", opts: ["Nacional", "Provincial", "Distrital", "Regional", "Internacional"], a: 3, learn: "🚗 **Colectivos:** Formalmente, el servicio de auto colectivo se autoriza en el ámbito Regional (entre provincias)." },
+        { q: "14. Altura mínima letra señal informativa en vía de 90-120 km/h:", opts: ["15.0 cm", "25.0 cm", "20.0 cm", "30.0 cm", "35.0 cm"], a: 1, learn: "📏 **Legibilidad:** A alta velocidad (autopista), las letras deben medir 25cm para leerse a tiempo." },
+        { q: "15. Vigencia del certificado de salud registrado:", opts: ["1 año", "3 meses", "6 meses", "30 días", "Indefinida"], a: 2, learn: "🩺 **Examen Médico:** Una vez aprobado, tienes 6 meses de validez para completar tu trámite de licencia." },
+        { q: "16. Ancho máximo permitido para un vehículo (sin espejos):", opts: ["2.40 m", "2.50 m", "2.80 m", "3.00 m", "2.60 m"], a: 4, learn: "📐 **Ancho:** Ningún vehículo estándar puede medir más de 2.60 metros de ancho." },
+        { q: "17. Color del recuadro del símbolo en señales de servicios (azules):", opts: ["Blanco", "Negro", "Amarillo", "Rojo", "No lleva"], a: 0, learn: "⛽ **Contraste:** En señales azules (servicios), el ícono va dentro de un recuadro blanco para resaltar." },
+        { q: "18. Condición para obtener licencia A-I a los 16 años:", opts: ["Permiso padres", "Estudiante mecánica", "Vehículo propio", "Casado/Título (Capacidad)", "Solo automático"], a: 3, learn: "💍 **Emancipación:** A los 16 años solo puedes conducir si tienes plena capacidad civil (estás casado o tienes título)." },
+        { q: "19. Relación potencia/peso mínima para M3 y N3:", opts: ["5.5 kW/t", "4.85 kW/t", "6.0 kW/t", "4.0 kW/t", "7.2 kW/t"], a: 1, learn: "⚡ **Potencia:** Para no ser una tortuga en subidas, el vehículo debe tener al menos 4.85 kW por cada tonelada." },
+        { q: "20. Vigencia nueva A-I tras sanción MUY GRAVE (suspensión):", opts: ["2 años", "10 años", "5 años", "8 años", "3 años"], a: 2, learn: "📉 **A-I Castigada:** Si tienes A-I (normalmente 10 años) y cometes falta Muy Grave, te bajan la vigencia a 5 años." },
+        { q: "21. Código de señal preventiva 'Delineador de Curva' (Chevron):", opts: ["P-1A", "P-60", "P-58", "P-33", "P-61"], a: 4, learn: "↩️ **Código:** El Chevron (rectángulo con flecha) se identifica como P-61 en el manual." },
+        { q: "22. Medida preventiva si vehículo de transporte no tiene SOAT:", opts: ["Retención", "Multa", "Suspensión", "Interrupción del viaje", "Remoción"], a: 0, learn: "🛑 **Sin Seguro:** Sin SOAT el vehículo es un peligro ilegal, la policía aplica RETENCIÓN inmediata." },
+        { q: "23. Definición de 'Máquina Amarilla' (RNV):", opts: ["Cat S", "Requiere placa", "Cat N3", "No es vehículo SNTT", "Circula libre"], a: 3, learn: "🚜 **No es Transporte:** Las máquinas de construcción no están hechas para viajar en carretera (No SNTT)." },
+        { q: "24. Distancia mínima señal PARE en zona rural:", opts: ["1 metro", "2 metros", "3 metros", "5 metros", "0.5 metros"], a: 1, learn: "👀 **Visibilidad Rural:** En el campo, el PARE se pone un poco antes (2 metros) para ver mejor el cruce." },
+        { q: "25. Antigüedad requerida para recategorizar a A-IIb:", opts: ["2a AI / 1a AIIa", "1a AI", "3 años AI / 1 año AIIa", "4a AI", "Ninguna"], a: 2, learn: "📅 **Escalera:** Para manejar microbús (A-IIb) necesitas 3 años de experiencia en auto (A-I) o 1 año en taxi (A-IIa)." },
+        { q: "26. Categorías obligadas a usar láminas retrorreflectivas:", opts: ["N3/O4", "M3/N3", "M1/M2/M3...", "Todos", "M2, M3 y N"], a: 4, learn: "✨ **Visibilidad:** Cintas reflectivas son obligatorias para transporte de pasajeros (M2, M3) y toda carga (N)." },
+        { q: "27. Significado de señal R-50:", opts: ["Contrario", "Distancia", "No bloquear cruce", "Ceda el paso", "Solo buses"], a: 2, learn: "❌ **Anti-Bloqueo:** La R-50 indica 'Prohibido bloquear la intersección' (usada con la malla ortogonal)." },
+        { q: "28. Plazo conservación manifiesto de usuarios impreso:", opts: ["1 año", "30 días", "60 días", "90 días", "5 años"], a: 1, learn: "📂 **Archivo:** La empresa debe guardar la lista de pasajeros física por 30 días para control." },
+        { q: "29. Discapacidad no registrada (Oral):", type: "AUDIO", key: ["retener", "comunicar", "reexaminación"], learn: "🔊 **Oral:** Procedimiento ante discapacidad no registrada en licencia." },
+        { q: "30. Láminas Retro Specs (Oral):", type: "AUDIO", key: ["rojo", "blanco", "lateral", "posterior"], learn: "🔊 **Oral:** Colores y ubicación de láminas retroreflectivas." },
+        { q: "31. Prohibido Adelantar (Oral):", type: "AUDIO", key: ["continua", "banderola", "R-16"], learn: "🔊 **Oral:** Señalización para prohibición de adelantamiento." }
+    ],
+    'C2': [
+        { q: "1. Si un conductor de 76 años revalida su licencia A-I, ¿por qué periodo se otorga?", opts: ["1 año", "5 años", "2 años", "3 años", "6 meses"], a: 0, learn: "👴 **Edad Avanzada:** A partir de los 76 años, la revalidación es anual (cada 1 año) por seguridad médica." },
+        { q: "2. Característica única de la forma de la señal preventiva P-61 (Chevron):", opts: ["Circular", "Cuadrada (Rombo)", "Rectangular", "Triangular", "Pentagonal"], a: 2, learn: "🛑 **Señales:** El Chevron es la única preventiva rectangular; sirve para delinear curvas peligrosas." },
+        { q: "3. Tolerancia de peso permitida para el Peso Bruto Vehicular en pesaje dinámico:", opts: ["5%", "2%", "8%", "No existe", "3%"], a: 4, learn: "⚖️ **Pesaje:** En balanzas dinámicas (movimiento), se perdona un error de hasta el 3% del peso total." },
+        { q: "4. Jornada máxima continua de conducción en turno NOCTURNO:", opts: ["3h 30min", "5 horas", "4h 30min", "4 horas", "6 horas"], a: 3, learn: "🌙 **Fatiga:** De noche el riesgo aumenta, por lo que solo se permite conducir 4 horas seguidas (vs 5 de día)." },
+        { q: "5. Color de fondo específico para señales preventivas en Zonas Escolares (P-49):", opts: ["Amarillo", "Naranja", "Amarillo Limón (Verde)", "Blanco", "Azul"], a: 2, learn: "🏫 **Visibilidad:** Las zonas escolares usan 'Amarillo Limón Fluorescente' para captar atención inmediata." },
+        { q: "6. Requisito de experiencia para recategorizar a A-IIIa:", opts: ["A-I por 3 años", "A-IIb por 2 años", "A-IIa por 2 años", "A-IIb por 1 año", "A-I por 4 años"], a: 1, learn: "📈 **Carrera:** Para llegar a la cima (A-IIIa), necesitas haber conducido con la A-IIb al menos 2 años." },
+        { q: "7. Condición técnica sobre los bordes de los parachoques de un M1:", opts: ["Cromados", "Acero externo", "Sin filos cortantes", "60cm altura", "Flexibles"], a: 2, learn: "🔪 **Seguridad Peatonal:** Los parachoques no pueden tener filos o ángulos que corten en caso de atropello." },
+        { q: "8. ¿Qué indica la señal R-14A (flecha blanca horizontal sobre fondo negro)?", opts: ["Doble sentido", "Voltear obligado", "Tránsito en un sentido", "Autopista", "Sin salida"], a: 2, learn: "⬅️ **Sentido:** La flecha en fondo negro confirma que la vía tiene una sola dirección de circulación." },
+        { q: "9. Se considera 'Abandono del Servicio' si se deja de prestar sin causa por:", opts: ["5 días", "3 días", "15 días", "24 horas", "10 días en un mes"], a: 4, learn: "🚌 **Continuidad:** Si faltas 10 días (seguidos o no) en un mes, pierdes la concesión de ruta." },
+        { q: "10. Profundidad mínima de cocada neumático N3 (camión pesado):", opts: ["1.6 mm", "1.0 mm", "3.0 mm", "2.0 mm", "4.0 mm"], a: 3, learn: "🚚 **Llantas:** Los camiones pesados (N3) requieren más agarre: mínimo 2.0 mm de profundidad." },
+        { q: "11. Tipo de alfabeto recomendado para señales informativas (Altura 20cm):", opts: ["Serie A", "Serie B", "Serie E", "Serie C", "Times New Roman"], a: 2, learn: "🔤 **Legibilidad:** La 'Serie E' es una letra ancha y clara, ideal para leerse a alta velocidad." },
+        { q: "12. Vigencia de Licencia A-I tras ser sancionado con infracción LEVE:", opts: ["5 años", "8 años", "10 años", "2 años", "3 años"], a: 1, learn: "📆 **Castigo:** Una falta Leve reduce tu vigencia de 10 a 8 años. Una Grave la bajaría a 5." },
+        { q: "13. ¿Qué indica la señal P-60 (Triángulo 'NO ADELANTAR')?", opts: ["Fin de prohibición", "Zona de NO adelantar", "Cruce izquierda", "Estrechamiento", "Derrumbes"], a: 1, learn: "🚫 **Adelantamiento:** Esta señal se coloca a la izquierda para advertir que es peligroso pasar a otro auto." },
+        { q: "14. Requisito en factura para nacionalizar motor remanufacturado:", opts: ["Año", "Potencia", "Número estampado", "Kilometraje", "Color"], a: 2, learn: "🔢 **Identidad:** El motor debe tener su número grabado claramente identificado en los papeles." },
+        { q: "15. Duración acumulada máxima de conducción (2 choferes, 24 horas):", opts: ["8 horas", "12 horas", "14 horas", "10 horas", "9 horas"], a: 1, learn: "⏱️ **Turnos:** Aunque haya dos choferes, ninguno puede manejar más de 12 horas en total por día." },
+        { q: "16. Diferencia de color de la señal R-30F (Velocidad en Curva):", opts: ["Blanco/Rojo", "Amarillo Fluo", "Fondo amarillo", "Naranja", "Azul"], a: 2, learn: "⚠️ **Excepción:** Es una señal de regulación (velocidad) pero usa fondo amarillo porque advierte peligro." },
+        { q: "17. Edad mínima para obtener DIRECTAMENTE licencia B-IIc (Mototaxi):", opts: ["21 años", "16 años", "20 años", "18 años", "23 años"], a: 3, learn: "🛺 **Edad:** Para manejar mototaxi profesionalmente, basta ser mayor de edad (18 años)." },
+        { q: "18. Dispositivo obligatorio de control para buses M3:", opts: ["GPS", "Tacógrafo", "Radio", "Cámara", "Sensor"], a: 1, learn: "📼 **Caja Negra:** El tacógrafo registra velocidad y tiempos de conducción para control policial." },
+        { q: "19. ¿Qué significa la señal I-28 (Rectángulo azul con ola blanca)?", opts: ["Playa", "Balneario", "Inundación", "Tsunami", "Puerto"], a: 3, learn: "🌊 **Emergencia:** Indica zona de riesgo por Tsunami, vital en la costa peruana." },
+        { q: "20. Vigencia de revalidación para conductor profesional de 72 años:", opts: ["5 años", "1 año", "2 años", "3 años", "6 meses"], a: 1, learn: "👴 **Profesionales:** A partir de los 70 años, los profesionales revalidan anualmente." },
+        { q: "21. Velocidad del limitador en transporte público nacional:", opts: ["90 km/h", "100 km/h", "80 km/h", "120 km/h", "110 km/h"], a: 0, learn: "🚌 **Tope:** Los buses interprovinciales no pueden físicamente superar los 90 km/h por ley." },
+        { q: "22. Ancho mínimo de una 'Línea de Pare':", opts: ["0.30 m", "0.40 m", "0.60 m", "0.50 m", "0.25 m"], a: 3, learn: "📏 **Señalización:** La línea de detención es gruesa (medio metro) para verse bien desde lejos." },
+        { q: "23. Categoría de cuatriciclo de carga (450kg):", opts: ["L5", "L7", "L6", "M1", "N1"], a: 1, learn: "🚜 **Clasificación:** Los cuatriciclos pesados de carga entran en la categoría L7." },
+        { q: "24. ¿Cuándo vuelve a sacar licencia alguien cancelado por ebriedad + accidente?", opts: ["3 años", "Nunca", "5 años", "10 años", "1 año"], a: 1, learn: "🍷 **Tolerancia Cero:** Ebriedad con accidente es inhabilitación DEFINITIVA. Nunca más maneja." },
+        { q: "25. Señal R-58A (Auto izquierda / Bici derecha) indica:", opts: ["No bicis", "Compartida", "Exclusiva", "Vía segregada", "Cruce"], a: 3, learn: "🚴 **Orden:** Indica que cada uno tiene su carril separado: autos a un lado, bicis al otro." },
+        { q: "26. Vehículos exonerados de antiempotramiento posterior:", opts: ["N2", "O3", "Distancia <350mm", "Cisternas", "Volquetes"], a: 2, learn: "📐 **Física:** Si el chasis ya es muy bajo (menos de 35cm del suelo), no necesita defensa extra." },
+        { q: "27. Sanción a Escuela por dar constancia sin cumplir horas:", opts: ["1 UIT", "Suspensión", "15 UIT + Cancelación", "Amonestación", "5 UIT"], a: 2, learn: "🏫 **Fraude:** Es una falta muy grave que cierra la escuela definitivamente y impone multa millonaria." },
+        { q: "28. Color de cruz en señales de emergencia (Hospital/Primeros Auxilios):", opts: ["Azul/Blanco", "Azul/Recuadro Blanco/Cruz Roja", "Blanco/Rojo", "Verde", "Rojo"], a: 1, learn: "🏥 **Símbolo:** La Cruz Roja sobre fondo blanco es el estándar internacional de salud en estas señales." },
+        { q: "29. Antigüedad máxima permanencia transporte mercancías:", opts: ["15 años", "20 años", "30 años", "10 años", "No sujeto (si pasa ITV)"], a: 4, learn: "🚛 **Carga:** Los camiones no tienen límite de edad, siempre que aprueben su Revisión Técnica (ITV)." },
+        { q: "30. ¿Qué indica una línea discontinua más ANCHA de lo normal?", opts: ["No cambio", "Borde", "Línea de continuidad", "Estacionamiento", "Opuestos"], a: 2, learn: "🛣️ **Salidas:** Esa línea gorda avisa que el carril se va a terminar o desviar pronto." },
+        { q: "31. Bonif. Suspensión (Oral):", type: "AUDIO", key: ["10%", "5%", "delantero"], learn: "🔊 **Oral:** Responde sobre bonificación técnica en suspensión." },
+        { q: "32. Rampa Frenado (Oral):", type: "AUDIO", key: ["rojo", "tachas", "1000"], learn: "🔊 **Oral:** Describe las características de una rampa de emergencia." },
+        { q: "33. Suspensión Precautoria (Oral):", type: "AUDIO", key: ["30%", "treinta", "flota"], learn: "🔊 **Oral:** Porcentaje de flota para suspensión precautoria." }
+    ]
+};
+
+const app = {
+    cat: 'A-I',
+    unlocked: 0,
+    currCfg: null,
+    qIdx: 0,
+    score: 0,
+    timer: null,
+    timeLeft: 900, // 15 minutos
+
+    config: [
+        { id: 'A1', name: 'Nivel A1', min: 60, max: 100, mc: 5 },
+        { id: 'A2', name: 'Nivel A2', min: 70, max: 120, mc: 5 },
+        { id: 'B1', name: 'Nivel B1', min: 100, max: 140, mc: 6, open: 10 },
+        { id: 'B2', name: 'Nivel B2', min: 120, max: 160, mc: 5, open: 15 },
+        { id: 'C1', name: 'Nivel C1', min: 140, max: 170, mc: 5, open: 10 },
+        { id: 'C2', name: 'Nivel C2', min: 150, max: 180, mc: 5, open: 10 }
+    ],
+
+    init: function() {
+        const s = localStorage.getItem('drive_lvl');
+        if(s) this.unlocked = parseInt(s);
+        this.renderLvl();
+        this.applyEffects();
+    },
+
+    // Aplica el efecto de luz a todos los elementos con clase .spotlight
+    applyEffects: function() {
+        const els = document.querySelectorAll('.spotlight');
+        els.forEach(el => {
+            el.onmousemove = e => {
+                const rect = el.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                el.style.setProperty('--mouse-x', `${x}px`);
+                el.style.setProperty('--mouse-y', `${y}px`);
+            }
+        });
+    },
+
+    reset: function() {
+        this.stopTimer();
+        localStorage.removeItem('drive_lvl');
+        location.reload();
+    },
+
+    nav: function(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    },
+
+    // Animación y selección de categoría
+    setCat: function(c, btn) {
+        // Añadir clase de animación
+        btn.classList.add('card-selected');
+        
+        // Esperar 400ms antes de cambiar de vista
+        setTimeout(() => {
+            this.cat = c;
+            document.getElementById('cat-lbl').innerText = c;
+            this.renderLvl();
+            this.nav('v-levels');
+            // Quitar la clase por si vuelve atrás
+            btn.classList.remove('card-selected');
+        }, 400);
+    },
+
+    renderLvl: function() {
+        const c = document.getElementById('lvl-list');
+        c.innerHTML = '';
+        this.config.forEach((l, i) => {
+            const u = i <= this.unlocked;
+            const d = document.createElement('div');
+            d.className = `lvl-row spotlight ${u ? 'unlocked' : 'locked'}`;
+            d.innerHTML = `
+                <div><strong>${l.name}</strong><br><small style="color:var(--text-dim)">Mínimo: ${l.min} pts</small></div>
+                <div class="badge">${u ? 'ABIERTO' : '🔒'}</div>
+            `;
+            if(u) d.onclick = () => this.start(i);
+            c.appendChild(d);
+        });
+        this.applyEffects();
+    },
+
+    start: function(i) {
+        const cfg = this.config[i];
+        this.currCfg = { ...cfg, qs: DB[cfg.id] || DB['A1'] };
+        this.nav('v-study');
+        this.renderStudy();
+    },
+
+    renderStudy: function() {
+        const c = document.getElementById('study-container');
+        c.innerHTML = '';
+        this.currCfg.qs.forEach((item) => {
+            let cleanQuestion = item.q.replace(/^\d+\.\s*/, '');
+            let teaching = item.learn ? item.learn : "💡 <em>Tip: Revisa el Reglamento Nacional de Tránsito.</em>";
+            const card = document.createElement('div');
+            card.className = 'study-card';
+            card.innerHTML = `<div class="study-q">${cleanQuestion}</div><div class="study-a">${teaching}</div>`;
+            c.appendChild(card);
+        });
+    },
+
+    startExam: function() {
+        this.qIdx = 0;
+        this.score = 0;
+        this.nav('v-exam');
+        this.renderQ();
+        this.startTimer(); // Iniciar el reloj solo aquí
+    },
+
+    // Lógica del Temporizador
+    startTimer: function() {
+        this.timeLeft = 900; // 15 minutos
+        this.updateTimerDisplay();
+        const display = document.getElementById('timer-display');
+        display.classList.add('active');
+        display.classList.remove('danger');
+        
+        if(this.timer) clearInterval(this.timer);
+        
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            this.updateTimerDisplay();
+            
+            // Alerta visual si queda menos de 1 minuto
+            if(this.timeLeft < 60) display.classList.add('danger');
+            
+            if(this.timeLeft <= 0) {
+                this.stopTimer();
+                this.finish(); // Se acabó el tiempo
+            }
+        }, 1000);
+    },
+
+    stopTimer: function() {
+        if(this.timer) clearInterval(this.timer);
+        const display = document.getElementById('timer-display');
+        display.classList.remove('active', 'danger');
+    },
+
+    updateTimerDisplay: function() {
+        const m = Math.floor(this.timeLeft / 60);
+        const s = this.timeLeft % 60;
+        document.getElementById('timer-display').innerText = 
+            `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    },
+
+    renderQ: function() {
+        const q = this.currCfg.qs[this.qIdx];
+        const tot = this.currCfg.qs.length;
+        document.getElementById('ex-name').innerText = this.currCfg.name;
+        document.getElementById('ex-count').innerText = `${this.qIdx+1}/${tot}`;
+        document.getElementById('bar').style.width = `${((this.qIdx)/tot)*100}%`;
+        document.getElementById('q-text').innerText = q.q;
+
+        const area = document.getElementById('q-area');
+        area.innerHTML = '';
+
+        if(q.type === 'TEXT') {
+            area.innerHTML = `<textarea id="in-txt" placeholder="Escribe tu respuesta..."></textarea><button class="action-btn spotlight primary" onclick="app.ansText()">Enviar Respuesta</button>`;
+        } else if(q.type === 'AUDIO') {
+            area.innerHTML = `<div class="mic-btn" onclick="app.rec(this)">🎤</div><p id="rec-s" style="text-align:center;font-size:0.9rem;color:var(--text-dim)">Toca para grabar</p><input type="hidden" id="in-aud"><button id="b-aud" class="action-btn spotlight primary" style="display:none" onclick="app.ansAudio()">Enviar Respuesta</button>`;
+        } else {
+            q.opts.forEach((o, i) => {
+                const b = document.createElement('button');
+                b.className = 'opt-btn spotlight';
+                b.innerText = o;
+                b.onclick = () => app.ansMC(i);
+                area.appendChild(b);
+            });
+        }
+        this.applyEffects();
+    },
+
+    ansMC: function(i) {
+        if(i === this.currCfg.qs[this.qIdx].a) this.score += this.currCfg.mc;
+        this.next();
+    },
+
+    ansText: function() {
+        const val = document.getElementById('in-txt').value.toLowerCase();
+        this.scoreOpen(val);
+    },
+
+    rec: function(btn) {
+        const s = document.getElementById('rec-s');
+        btn.classList.add('recording');
+        s.innerText = "Escuchando...";
+        setTimeout(() => {
+            btn.classList.remove('recording');
+            s.innerText = "Grabación finalizada";
+            document.getElementById('b-aud').style.display = 'block';
+            document.getElementById('in-aud').value = this.currCfg.qs[this.qIdx].key[0];
+        }, 1500);
+    },
+
+    ansAudio: function() {
+        this.scoreOpen(document.getElementById('in-aud').value);
+    },
+
+    scoreOpen: function(val) {
+        let hits = 0;
+        this.currCfg.qs[this.qIdx].key.forEach(k => { if(val.includes(k)) hits++; });
+        if(hits >= 1) {
+            const pts = this.currCfg.open;
+            const partial = this.currCfg.id === 'B2' ? 0.7 : 0.8;
+            this.score += (hits >= 2 ? pts : (pts * partial));
+        }
+        this.next();
+    },
+
+    next: function() {
+        if(this.qIdx < this.currCfg.qs.length - 1) { this.qIdx++; this.renderQ(); }
+        else this.finish();
+    },
+
+    finish: function() {
+        this.stopTimer(); // Detener reloj al terminar
+        this.nav('v-result');
+        if(this.score > this.currCfg.max) this.score = this.currCfg.max;
+        this.score = Math.round(this.score);
+        const pass = this.score >= this.currCfg.min;
+        
+        const val = document.getElementById('res-val');
+        val.innerText = this.score;
+        val.style.color = pass ? 'var(--success)' : 'var(--error)';
+        
+        document.getElementById('res-msg').innerText = pass ? "¡FELICIDADES, APROBADO!" : `Necesitas mínimo ${this.currCfg.min} pts para aprobar`;
+        
+        const cert = document.getElementById('cert');
+        if(pass) {
+            cert.style.display = 'block';
+            document.getElementById('c-cat').innerText = this.cat;
+            document.getElementById('c-lvl').innerText = this.currCfg.name;
+            let n = "APROBADO";
+            if(this.score === this.currCfg.max) n = "EXCELENTE";
+            else if(this.score >= this.currCfg.max*0.9) n = "SOBRESALIENTE";
+            document.getElementById('c-note').innerText = n;
+
+            const idx = this.config.findIndex(l => l.id === this.currCfg.id);
+            if(idx === this.unlocked) {
+                this.unlocked++;
+                localStorage.setItem('drive_lvl', this.unlocked);
+            }
+        } else {
+            cert.style.display = 'none';
+        }
+    }
+};
+app.init();
+</script>
+</body>
+</html>
