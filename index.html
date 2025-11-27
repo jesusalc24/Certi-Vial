@@ -7,344 +7,190 @@
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    
+    <meta name="apple-mobile-web-app-title" content="Certi-Vial">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        /* --- VARIABLES & RESET --- */
+        /* --- TEMA 3D DEEP GLASS --- */
         :root {
-            --bg-dark: #050507;
-            --primary: #8b5cf6;
-            --primary-glow: rgba(139, 92, 246, 0.5);
-            --secondary: #06b6d4;
-            --accent: #f43f5e;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-main: #ffffff;
-            --text-muted: #94a3b8;
-            --font-main: 'Outfit', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
+            --bg-base: #020005;
+            --bg-gradient: radial-gradient(at 0% 0%, rgba(120, 50, 255, 0.4) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(50, 200, 255, 0.3) 0px, transparent 50%);
+            --primary: #d8b4fe; --secondary: #22d3ee; --accent: #f472b6;
+            --text: #ffffff; --text-dim: #94a3b8; --error: #fb7185; --success: #4ade80;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
         body {
-            margin: 0; padding: 0;
-            font-family: var(--font-main);
-            background-color: var(--bg-dark);
-            background-image: 
-                radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 50%);
-            background-attachment: fixed;
-            color: var(--text-main);
-            height: 100vh; width: 100vw;
-            overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
+            margin: 0; font-family: 'Outfit', sans-serif; background-color: var(--bg-base); background-image: var(--bg-gradient); background-attachment: fixed; background-size: cover; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; overscroll-behavior-y: none; touch-action: none;
         }
 
-        /* --- CONTENEDOR PRINCIPAL (APP SHELL) --- */
         #app {
-            width: 100%; max-width: 500px; height: 100%;
-            background: rgba(15, 23, 42, 0.3);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-left: 1px solid var(--glass-border);
-            border-right: 1px solid var(--glass-border);
-            display: flex; flex-direction: column;
-            position: relative;
-            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+            width: 100%; max-width: 600px; height: 100vh; background: rgba(20, 20, 30, 0.6); backdrop-filter: blur(40px) saturate(150%); -webkit-backdrop-filter: blur(40px) saturate(150%); border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 40px 80px -20px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden; position: relative;
         }
 
-        /* --- HEADER --- */
         header {
-            padding: 20px 25px;
-            display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.2);
-            border-bottom: 1px solid var(--glass-border);
-            z-index: 50;
-            padding-top: max(20px, env(safe-area-inset-top));
+            padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-top: env(safe-area-inset-top, 20px); z-index: 50; background: rgba(0,0,0,0.2); flex-shrink: 0;
         }
+        h1 { margin: 0; font-size: 1.4rem; font-weight: 800; letter-spacing: -1px; background: linear-gradient(to right, #fff, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        button.reset { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: var(--text-dim); padding: 6px 12px; border-radius: 30px; cursor: pointer; transition: 0.3s; font-weight: 600; font-size: 0.7rem; font-family: 'Outfit', sans-serif; touch-action: manipulation; }
+        button.reset:hover { background: rgba(251, 113, 133, 0.15); color: #fff; border-color: var(--error); }
+        #timer-display { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--secondary); font-weight: 700; text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); opacity: 0; transition: opacity 0.5s; }
+        #timer-display.active { opacity: 1; }
+        #timer-display.danger { color: var(--error); animation: pulse-text 1s infinite; }
+        @keyframes pulse-text { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        h1 {
-            margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-shadow: 0 2px 10px rgba(255,255,255,0.1);
-        }
-
-        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-
-        .reset-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-            color: var(--text-muted); font-size: 0.7rem; font-weight: 600;
-            padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: 0.3s;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        .reset-btn:hover { background: rgba(244, 63, 94, 0.2); border-color: var(--accent); color: #fff; }
-
-        #timer-display {
-            font-family: var(--font-mono); font-weight: 700; font-size: 1rem;
-            color: var(--secondary); text-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
-            transition: color 0.3s;
-        }
-        #timer-display.danger { color: var(--accent); animation: pulse 1s infinite; }
-
-        /* --- VISTAS Y TRANSICIONES --- */
+        /* --- VISTAS --- */
         .view {
-            display: none; flex: 1; flex-direction: column;
-            overflow-y: auto; overflow-x: hidden;
-            padding: 25px; scroll-behavior: smooth;
+            display: none; 
+            width: 100%; height: 100%; flex-direction: column;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
+            padding: 25px; position: relative; box-sizing: border-box;
         }
-        .view.active { display: flex; animation: fadeEnter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
         
-        #v-game.active { padding: 0; overflow: hidden; } /* Juego full screen */
-
-        @keyframes fadeEnter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-        /* --- COMPONENTES UI --- */
+        .view.active {
+            display: flex; 
+            animation: fadeIn 0.3s ease-out;
+        }
         
-        /* Tarjetas de Selección */
-        .card-btn {
-            background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
-            border: 1px solid var(--glass-border);
-            border-radius: 24px; padding: 25px; margin-bottom: 15px;
-            display: flex; align-items: center; gap: 20px;
-            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative; overflow: hidden;
-        }
-        .card-btn::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            transform: translateX(-100%); transition: 0.5s;
-        }
-        .card-btn:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
-        .card-btn:hover::before { transform: translateX(100%); }
-        .card-btn:active { transform: scale(0.98); }
+        #v-game.active { padding: 0; overflow: hidden; }
+
+        @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
+        /* UI General */
+        .spotlight { position: relative; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; overflow: hidden; cursor: pointer; transition: transform 0.1s, box-shadow 0.3s, border-color 0.3s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); -webkit-tap-highlight-color: transparent; }
+        .spotlight:hover { border-color: rgba(255,255,255,0.2); }
+        .spotlight:active { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0); }
+        .card-btn { padding: 25px; margin-bottom: 15px; display: flex; align-items: center; transition: 0.3s; flex-shrink: 0; }
+        .card-selected { background: rgba(74, 222, 128, 0.15) !important; border-color: var(--success) !important; box-shadow: 0 0 30px rgba(74, 222, 128, 0.3) !important; transform: scale(0.96) !important; }
+        .card-btn h3 { margin: 0 0 5px 0; color: #fff; font-size: 1.2rem; font-weight: 700; }
+        .card-btn small { color: var(--text-dim); font-weight: 500; }
+        .card-icon { font-size: 2.5rem; margin-right: 20px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
         
-        .card-selected {
-            background: linear-gradient(145deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.02)) !important;
-            border-color: var(--success) !important;
-            box-shadow: 0 0 20px rgba(74, 222, 128, 0.2) !important;
-        }
+        .lvl-row { padding: 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 20px; background: rgba(255,255,255,0.02); transition: 0.2s; flex-shrink: 0; }
+        .lvl-row.unlocked:hover { background: rgba(255,255,255,0.05); transform: translateX(5px); }
+        .lvl-row.locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; background: #111; color: var(--text-dim); border: 1px solid #333; }
+        .unlocked .badge { background: var(--primary); color: #000; border: none; box-shadow: 0 0 15px var(--primary); }
 
-        .card-icon { font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
-        .card-btn h3 { margin: 0 0 4px 0; font-size: 1.2rem; }
-        .card-btn small { color: var(--text-muted); font-size: 0.85rem; }
+        /* Estudio */
+        .study-scroll { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 10px; flex: 1; }
+        .study-card { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-left: 4px solid var(--secondary); border-radius: 16px; padding: 20px; animation: slideIn 0.4s ease-out forwards; flex-shrink: 0; }
+        .study-q { color: var(--secondary); font-size: 0.9rem; font-weight: 800; margin-bottom: 8px; text-transform: uppercase; line-height: 1.3; }
+        .study-a { font-size: 1.05rem; color: #ddd; line-height: 1.5; font-weight: 400; }
+        @keyframes slideIn { from {opacity:0; transform:translateX(-20px);} to {opacity:1; transform:translateX(0);} }
 
-        .arcade-card { border-color: rgba(244, 114, 182, 0.3); background: linear-gradient(145deg, rgba(244, 114, 182, 0.08), transparent); }
-        .arcade-card:hover { border-color: var(--accent); box-shadow: 0 0 20px rgba(244, 114, 182, 0.2); }
-
-        /* Botones de Acción */
-        .action-btn {
-            width: 100%; padding: 22px; border-radius: 18px; border: none;
-            font-family: var(--font-main); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
-            cursor: pointer; transition: 0.2s; margin-top: 20px; font-size: 0.9rem;
-            background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--glass-border);
-        }
-        .action-btn.primary {
-            background: linear-gradient(135deg, var(--primary), #7c3aed);
-            box-shadow: 0 10px 30px -10px var(--primary-glow);
-            border: none; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
-        .action-btn:active { transform: scale(0.98); opacity: 0.9; }
-
-        /* Lista de Niveles */
-        .lvl-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 20px; margin-bottom: 12px;
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: 18px; transition: 0.2s;
-        }
-        .lvl-row.unlocked:hover { background: rgba(255,255,255,0.05); transform: translateX(5px); border-color: var(--secondary); }
-        .lvl-row.locked { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
-        .badge { 
-            font-size: 0.7rem; font-weight: 800; padding: 6px 12px; border-radius: 12px; 
-            background: #000; color: var(--text-muted); border: 1px solid #333;
-        }
-        .unlocked .badge { background: var(--secondary); color: #000; border-color: var(--secondary); box-shadow: 0 0 10px rgba(6, 182, 212, 0.4); }
-
-        /* Seccion Estudio */
-        .study-scroll { padding-bottom: 20px; }
-        .study-card {
-            background: rgba(20,20,30,0.6); border: 1px solid var(--glass-border);
-            border-left: 4px solid var(--secondary); border-radius: 16px; padding: 20px; margin-bottom: 15px;
-            animation: slideInRight 0.4s ease-out forwards; opacity: 0;
-        }
-        .study-q { color: var(--secondary); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px; line-height: 1.4; }
-        .study-a { color: #e2e8f0; font-size: 1.05rem; line-height: 1.6; font-weight: 300; }
-        
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .action-btn { width: 100%; padding: 20px; background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); color: white; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; margin-top: 20px; text-align: center; font-family: 'Outfit', sans-serif; border-bottom: 4px solid rgba(0,0,0,0.3); touch-action: manipulation; flex-shrink: 0; }
+        .action-btn.primary { background: linear-gradient(135deg, rgba(192, 132, 252, 0.2), rgba(34, 211, 238, 0.1)); border: 1px solid rgba(192, 132, 252, 0.3); border-bottom: 4px solid rgba(192, 132, 252, 0.3); }
 
         /* Examen */
-        .progress { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 25px; overflow: hidden; }
-        .bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: 0.6s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 0 0 10px var(--primary-glow); }
+        .progress { height: 6px; background: rgba(255,255,255,0.05); margin-bottom: 20px; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+        .bar { height: 100%; background: linear-gradient(90deg, var(--secondary), var(--primary)); width: 0%; transition: 0.8s ease; }
+        .q-box { min-height: 100px; margin-bottom: 20px; font-size: 1.2rem; line-height: 1.4; font-weight: 600; color:#fff; flex-shrink: 0; }
+        .opt-btn { display: block; width: 100%; padding: 20px; margin-bottom: 12px; text-align: left; font-size: 1rem; color: #ccc; font-family: 'Outfit', sans-serif; touch-action: manipulation; flex-shrink: 0; }
+        .opt-btn:hover { color: white; background: rgba(255,255,255,0.08); }
+        textarea { width: 100%; height: 150px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 20px; border-radius: 20px; font-size: 1rem; outline: none; font-family: inherit; flex-shrink: 0; }
         
-        .q-box { font-size: 1.3rem; font-weight: 600; margin-bottom: 30px; line-height: 1.4; min-height: 100px; display: flex; align-items: center; }
+        .mic-btn { width: 80px; height: 80px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 2rem; margin: 0 auto 20px; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+        .mic-btn:hover { border-color: var(--primary); box-shadow: 0 0 30px var(--primary); transform: scale(1.1); }
+        .mic-btn.recording { background: rgba(251, 113, 133, 0.2); border-color: var(--error); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        .score-display { font-size: 5rem; text-align: center; font-weight: 900; margin: 20px 0; letter-spacing: -3px; }
+        .cert { border: 1px solid rgba(255,255,255,0.1); padding: 30px; margin-top: 30px; background: #fff; color: #000; position: relative; text-align: center; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .stamp { position: absolute; top: 20px; right: 20px; border: 4px solid #d32f2f; color: #d32f2f; padding: 5px 15px; border-radius: 10px; font-weight: 900; transform: rotate(-15deg); }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        /* --- ESTILOS DEL MINIJUEGO --- */
+        .arcade-card { border: 1px solid rgba(244, 114, 182, 0.4); background: linear-gradient(135deg, rgba(244, 114, 182, 0.1), transparent); }
+        .arcade-card h3 { color: #f472b6; text-shadow: 0 0 10px rgba(244, 114, 182, 0.5); }
         
-        .opt-btn {
-            width: 100%; text-align: left; padding: 20px; margin-bottom: 12px;
-            background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
-            color: #cbd5e1; border-radius: 16px; font-size: 1rem;
-            cursor: pointer; transition: 0.2s;
-        }
-        .opt-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); color: #fff; transform: translateX(5px); }
-        .opt-btn:active { transform: scale(0.98); background: var(--primary-glow); }
-
-        textarea { 
-            width: 100%; height: 150px; background: rgba(0,0,0,0.3); 
-            border: 1px solid var(--glass-border); border-radius: 16px; 
-            padding: 20px; color: #fff; font-family: inherit; font-size: 1rem;
-            resize: none; outline: none;
-        }
-        textarea:focus { border-color: var(--secondary); box-shadow: 0 0 15px rgba(6,182,212,0.1); }
-
-        /* Micrófono */
-        .mic-container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .mic-btn {
-            width: 90px; height: 90px; border-radius: 50%;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 2.5rem; cursor: pointer; transition: 0.3s;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .mic-btn:active { transform: scale(0.9); }
-        .mic-btn.recording { background: rgba(244, 63, 94, 0.2); border-color: var(--accent); animation: pulse-red 1.5s infinite; }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(244, 63, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); } }
-
-        /* Resultados */
-        .res-circle {
-            width: 180px; height: 180px; border-radius: 50%; margin: 0 auto 30px;
-            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
-            border: 2px solid var(--glass-border);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 4.5rem; font-weight: 800; letter-spacing: -2px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-        }
+        #game-layer { position: relative; width: 100%; height: 100%; background: #0f172a; overflow: hidden; display: flex; flex-direction: column; }
+        #sim-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
         
-        .cert {
-            background: #fff; color: #111; padding: 30px; border-radius: 20px;
-            position: relative; margin-top: 30px; text-align: left;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5); transform: rotate(-1deg);
+        .hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; font-family: 'JetBrains Mono', monospace; font-weight: bold; text-shadow: 0 2px 4px #000; z-index: 20; }
+        .hud-box { background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); font-size: 0.9rem; }
+        .spd-val { color: var(--secondary); font-size: 1.1rem; }
+        
+        .game-controls { position: absolute; bottom: 30px; width: 100%; height: 140px; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 30; pointer-events: none; }
+        .d-pad, .pedals { display: flex; gap: 15px; pointer-events: auto; align-items: flex-end; }
+        
+        .ctrl-btn { width: 75px; height: 75px; border-radius: 18px; border: none; background: rgba(255,255,255,0.1); color: #fff; font-size: 2rem; backdrop-filter: blur(5px); box-shadow: 0 4px 0 rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: 0.1s; }
+        .ctrl-btn:active, .ctrl-btn.pressed { transform: translateY(4px); box-shadow: none; background: rgba(255,255,255,0.3); }
+        .btn-brake { background: rgba(239, 68, 68, 0.3); border-color: #ef4444; height: 65px; width: 65px; font-size: 1.5rem; align-self: flex-end; margin-bottom: 5px; }
+        .btn-gas { background: rgba(34, 197, 94, 0.3); border-color: #22c55e; height: 95px; width: 85px; font-size: 2.8rem; }
+
+        .pc-hint { position: absolute; bottom: 180px; width: 100%; text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem; pointer-events: none; }
+        
+        /* Setup Menu (Garaje) */
+        #game-setup { 
+            position: absolute; top:0; left:0; width:100%; height:100%; 
+            background: rgba(15,23,42,0.95); z-index: 50; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px;
         }
-        .stamp {
-            position: absolute; top: 20px; right: 20px;
-            border: 3px solid #dc2626; color: #dc2626;
-            padding: 5px 10px; font-weight: 900; text-transform: uppercase;
-            transform: rotate(-15deg); font-family: var(--font-mono); letter-spacing: 2px;
+        .setup-form { width: 100%; max-width: 350px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; color: var(--text-dim); font-size: 0.9rem; margin-bottom: 5px; }
+        .form-control { 
+            width: 100%; padding: 15px; background: rgba(255,255,255,0.05); 
+            border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 12px; font-size: 1rem;
+            outline: none;
         }
-
-        /* --- GAME UI (MEJORADA) --- */
-        #v-game { background: #000; }
-        #game-layer { position: relative; width: 100%; height: 100%; background: #0f172a; }
-        #sim-canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
-
-        .hud {
-            position: absolute; top: 20px; left: 20px; right: 20px;
-            display: flex; justify-content: space-between;
-            font-family: var(--font-mono); z-index: 10; pointer-events: none;
-        }
-        .hud-panel {
-            background: rgba(0, 0, 0, 0.7); padding: 10px 15px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
-            display: flex; flex-direction: column; align-items: center;
-            backdrop-filter: blur(4px);
-        }
-        .hud-label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-        .hud-value { font-size: 1.2rem; font-weight: 700; color: #fff; }
-        .val-spd { color: var(--secondary); } .val-dist { color: var(--accent); }
-
-        .game-controls {
-            position: absolute; bottom: 30px; left: 0; width: 100%; height: 160px;
-            padding: 0 20px; display: flex; justify-content: space-between; align-items: flex-end;
-            z-index: 20; pointer-events: none; /* To allow clicks through empty space */
-        }
-        .d-pad, .pedals { display: flex; gap: 15px; pointer-events: auto; }
-
-        .ctrl-btn {
-            width: 70px; height: 70px; border-radius: 20px; border: none;
-            background: linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
-            border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 1.5rem;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
-            transition: 0.1s;
-        }
-        .ctrl-btn:active, .ctrl-btn.pressed { transform: translateY(4px); box-shadow: 0 2px 5px rgba(0,0,0,0.5); background: rgba(255,255,255,0.25); border-color: #fff; }
-
-        .btn-brake { background: rgba(220, 38, 38, 0.4); border-color: #ef4444; width: 65px; height: 65px; margin-bottom: 10px; font-size: 1.2rem; }
-        .btn-gas { background: rgba(22, 163, 74, 0.4); border-color: #22c55e; width: 85px; height: 100px; font-size: 2rem; }
-
-        #game-msg {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border);
-            padding: 40px; border-radius: 30px; text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8); display: none; z-index: 100;
-            width: 85%; max-width: 350px; animation: popIn 0.3s forwards;
-        }
-        @keyframes popIn { to { transform: translate(-50%, -50%) scale(1); } }
-
-        .pc-hint { position: absolute; bottom: 200px; width: 100%; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.3); pointer-events: none; font-family: var(--font-mono); }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .form-control:focus { border-color: var(--primary); }
+        
+        #game-msg { position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); background: rgba(0,0,0,0.95); padding: 30px; border-radius: 20px; border: 2px solid var(--error); text-align: center; display: none; z-index: 100; min-width: 280px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <header>
+    <header id="app-header">
         <h1>Certi-Vial</h1>
         <div class="header-right">
-            <button class="reset" onclick="app.reset()">⟳ REINICIAR</button>
+            <button class="reset" onclick="app.reset()">⟳ Reiniciar</button>
             <div id="timer-display">15:00</div>
         </div>
     </header>
 
     <div id="v-home" class="view active">
-        <div style="text-align:center; padding: 20px 0 40px;">
-            <h2 style="margin-bottom: 10px; font-size: 1.8rem;">Bienvenido</h2>
-            <p style="color:var(--text-muted); margin:0;">Seleccione su vehículo:</p>
-        </div>
+        <p style="text-align:center; color:var(--text-dim); margin-bottom:40px; font-size:1.1rem;">Seleccione su categoría:</p>
         
-        <div class="card-btn" onclick="app.setCat('A-I', this)">
+        <div class="card-btn spotlight" onclick="app.setCat('A-I', this)">
             <div class="card-icon">🚗</div>
             <div><h3>Vehículo Particular</h3><small>Categoría A-I</small></div>
         </div>
         
-        <div class="card-btn" onclick="app.setCat('B-IIc', this)">
+        <div class="card-btn spotlight" onclick="app.setCat('B-IIc', this)">
             <div class="card-icon">🛺</div>
             <div><h3>Mototaxi</h3><small>Categoría B-IIc</small></div>
         </div>
 
-        <div style="flex:1"></div> <div style="width:100%; height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); margin: 20px 0;"></div>
+        <div style="width:100%; height:1px; background:rgba(255,255,255,0.1); margin: 25px 0;"></div>
 
-        <div class="card-btn arcade-card" onclick="Game.init()">
+        <div class="card-btn spotlight arcade-card" onclick="Game.init()">
             <div class="card-icon">🕹️</div>
-            <div><h3 style="color:#f472b6">Modo Arcade</h3><small>Simulador de Tráfico 3D</small></div>
+            <div><h3 style="color:#f472b6">Modo Arcade</h3><small>Taller & Simulador 3D</small></div>
         </div>
     </div>
 
     <div id="v-levels" class="view">
         <div style="display:flex; justify-content:space-between; margin-bottom:30px; align-items:center;">
             <h3 style="margin:0; font-size:1.5rem;">Niveles</h3>
-            <span id="cat-lbl" style="background:rgba(255,255,255,0.1); padding:6px 12px; border-radius:10px; font-family:var(--font-mono); font-size:0.8rem; color:var(--secondary);">CAT</span>
+            <span id="cat-lbl" style="color:var(--primary); font-weight:bold; background:rgba(255,255,255,0.05); padding:8px 16px; border-radius:12px;">CAT</span>
         </div>
         <div id="lvl-list"></div>
-        <button class="action-btn" onclick="app.nav('v-home')" style="margin-top: auto;">Volver</button>
+        <button class="action-btn spotlight" onclick="app.nav('v-home')">Volver al Inicio</button>
     </div>
 
     <div id="v-study" class="view">
-        <h3 style="text-align:center; margin:0 0 30px 0; color:var(--secondary); letter-spacing:2px; font-size:0.9rem;">MICRO-APRENDIZAJE</h3>
+        <h3 style="text-align:center; margin:0; color:var(--secondary); letter-spacing:2px; font-size:0.9rem;">PREPARACIÓN</h3>
+        <p style="text-align:center; color:var(--text-dim); font-size:1.2rem; margin-bottom:30px; font-weight:300;">Micro-Sesión de Estudio</p>
         <div id="study-container" class="study-scroll"></div>
-        <div style="padding-top: 20px; border-top: 1px solid var(--glass-border);">
-            <button class="action-btn primary" onclick="app.startExam()">COMENZAR EVALUACIÓN</button>
-        </div>
+        <button class="action-btn spotlight primary" onclick="app.startExam()">¡Estoy Listo!</button>
     </div>
 
     <div id="v-exam" class="view">
         <div class="progress"><div id="bar" class="bar"></div></div>
-        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-muted); margin-bottom:20px; text-transform:uppercase; font-weight:700; letter-spacing:1px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:var(--text-dim); margin-bottom:15px; text-transform:uppercase; font-weight:700; letter-spacing:1px;">
             <span id="ex-name">Nivel</span>
             <span id="ex-count">0/0</span>
         </div>
@@ -353,37 +199,68 @@
     </div>
 
     <div id="v-result" class="view">
-        <div style="text-align:center; padding-top: 20px;">
-            <h2 style="margin:0; color:var(--text-muted); text-transform:uppercase; letter-spacing:2px; font-size:1rem;">Calificación</h2>
-            <div class="res-circle">
-                <div id="res-val">0</div>
-            </div>
-            <p id="res-msg" style="font-size:1.2rem; margin-bottom:30px; color:#fff;"></p>
-        </div>
+        <h2 style="text-align:center; margin-top:0; color:var(--text);">Resultados</h2>
+        <div id="res-val" class="score-display">0</div>
+        <p id="res-msg" style="text-align:center; color:var(--text-dim); margin-bottom:30px; font-size:1.2rem;"></p>
 
         <div id="cert" class="cert" style="display:none">
             <div class="stamp">APROBADO</div>
-            <h2 style="margin:0 0 20px 0; letter-spacing:3px; border-bottom:2px dashed #ccc; padding-bottom:10px;">CERTIFICADO</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; font-size:0.9rem;">
+            <h2 style="margin:0 0 20px 0; letter-spacing:3px;">CERTIFICADO</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left; border-top:2px dashed #999; padding-top:20px;">
                 <p style="margin:5px 0"><strong>Categoría:</strong> <span id="c-cat">A</span></p>
                 <p style="margin:5px 0"><strong>Nivel:</strong> <span id="c-lvl">1</span></p>
-                <p style="margin:5px 0; grid-column:span 2; font-size:1.2rem; color:#111;">Nota Final: <strong id="c-note">OK</strong></p>
+                <p style="margin:5px 0; grid-column:span 2; font-size:1.2rem;"><strong>Nota:</strong> <span id="c-note" style="font-weight:900">OK</span></p>
             </div>
         </div>
-        <button class="action-btn primary" onclick="app.nav('v-levels'); app.renderLvl()">CONTINUAR</button>
+        <button class="action-btn spotlight primary" onclick="app.nav('v-levels'); app.renderLvl()">Continuar</button>
     </div>
 
     <div id="v-game" class="view">
+        <div id="game-setup">
+            <h2 style="color:var(--primary); margin-bottom:20px; font-size:1.8rem;">TALLER VIRTUAL</h2>
+            <div class="setup-form">
+                <div class="form-group">
+                    <label>Nombre de Piloto</label>
+                    <input type="text" id="p-name" class="form-control" placeholder="Tu nombre..." value="Conductor">
+                </div>
+                <div class="form-group">
+                    <label>Modelo de Vehículo</label>
+                    <select id="p-model" class="form-control" style="background:#222">
+                        <option value="sedan">Sedán (Estándar)</option>
+                        <option value="sport">Deportivo (Ancho)</option>
+                        <option value="suv">Camioneta (Largo)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Color de Pintura</label>
+                    <input type="color" id="p-color" class="form-control" value="#3b82f6" style="height:50px; padding:0; cursor:pointer;">
+                </div>
+                <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label>Lunas</label>
+                        <select id="p-win" class="form-control" style="background:#222">
+                            <option value="#1e3a8a">Normales</option>
+                            <option value="#000">Polarizadas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Luces</label>
+                        <select id="p-light" class="form-control" style="background:#222">
+                            <option value="#fef08a">Halógenas</option>
+                            <option value="#06b6d4">Xenón</option>
+                            <option value="#d946ef">Neón</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="action-btn spotlight primary" onclick="Game.launch()">SALIR A PISTA</button>
+                <button class="action-btn" onclick="app.nav('v-home')">VOLVER</button>
+            </div>
+        </div>
+
         <div id="game-layer">
             <div class="hud">
-                <div class="hud-panel">
-                    <span class="hud-label">VELOCIDAD</span>
-                    <span class="hud-value val-spd"><span id="hud-spd">0</span> <small>km/h</small></span>
-                </div>
-                <div class="hud-panel">
-                    <span class="hud-label">DISTANCIA</span>
-                    <span class="hud-value val-dist"><span id="hud-dist">0</span> <small>m</small></span>
-                </div>
+                <div class="hud-box"><span id="hud-name" style="color:#aaa; display:block; font-size:0.7rem">PLAYER</span>VEL: <span id="hud-spd" class="spd-val">0</span> km/h</div>
+                <div class="hud-box">DIST: <span id="hud-dist">0</span> m</div>
             </div>
 
             <canvas id="sim-canvas"></canvas>
@@ -392,8 +269,9 @@
                 <div style="font-size:3rem; margin-bottom:10px;">👮‍♂️</div>
                 <h2 style="color:var(--error); margin:0 0 10px 0;">¡INFRACCIÓN!</h2>
                 <p id="fail-reason" style="font-size:1.1rem; margin-bottom:25px; color:var(--text-muted);"></p>
-                <button class="action-btn primary" onclick="Game.reset()" style="margin:0 0 10px 0;">Reintentar</button>
-                <button class="action-btn" onclick="app.nav('v-home')" style="margin:0;">Salir</button>
+                <button class="ctrl-btn" style="width:100%; height:50px; font-size:1rem; background:var(--secondary); color:#000;" onclick="Game.init()">REINTENTAR</button>
+                <br><br>
+                <button class="ctrl-btn" style="width:100%; height:40px; font-size:0.8rem;" onclick="app.nav('v-home')">Salir al Menú</button>
             </div>
 
             <div class="pc-hint">Usa FLECHAS o WASD para conducir</div>
@@ -413,10 +291,6 @@
 </div>
 
 <script>
-window.onerror = function(msg, url, line) {
-    alert("Error: " + msg + " Line: " + line);
-};
-
 // ==========================================
 // 1. BASE DE DATOS COMPLETA Y ORIGINAL
 // ==========================================
@@ -569,23 +443,22 @@ const DB = {
         { q: "18. Según el RNV, los vehículos de categoría M3 (buses) deben contar obligatoriamente con un dispositivo específico para el control de la operación. ¿Cuál es?", opts: ["a) GPS con pantalla para el usuario.", "b) Tacógrafo o dispositivo electrónico registrador de tiempo y velocidad.", "c) Radio de comunicación UHF.", "d) Cámara de retroceso.", "e) Sensor de proximidad."], a: 1, learn: "📼 **M3:** Tacógrafo." },
         { q: "19. ¿Qué significa la señal vertical I-28 del Manual de Dispositivos (Rectángulo azul con una ola blanca)?", opts: ["a) Zona de Playa.", "b) Balneario.", "c) Peligro de inundación.", "d) Zona de Riesgo por Tsunami.", "e) Puerto."], a: 3, learn: "🌊 **I-28:** Tsunami." },
         { q: "20. Si un conductor de 72 años de edad con licencia profesional A-IIIa desea revalidarla, ¿cuál será el periodo de vigencia de su nueva licencia según el Reglamento de Licencias?", opts: ["a) 5 años.", "b) 1 año.", "c) 2 años.", "d) 3 años.", "e) 6 meses."], a: 1, learn: "👴 **72 años:** 1 año." },
-        { q: "21. De acuerdo al RENAT, los vehículos destinados al servicio de transporte público de personas de ámbito nacional deben contar con un sistema limitador de velocidad programado a:", opts: ["a) 90 km/h.", "b) 100 km/h.", "c) 80 km/h.", "d) 120 km/h.", "e) 110 km/h."], a: 0, learn: "🚌 **Limitador:** 90 km/h." },
-        { q: "22. Según el Manual de Dispositivos, ¿cuál es el ancho mínimo de una 'Línea de Pare' (demarcación horizontal blanca transversal)?", opts: ["a) 0.30 m.", "b) 0.40 m.", "c) 0.60 m.", "d) 0.50 m.", "e) 0.25 m."], a: 3, learn: "📏 **Pare:** 0.50 m." },
-        { q: "23. Según el RNV, ¿a qué categoría pertenece un vehículo de 4 ruedas con un peso neto de 450 kg destinado al transporte de mercancías (cuatriciclo pesado)?", opts: ["a) L5.", "b) L7.", "c) L6.", "d) M1.", "e) N1."], a: 1, learn: "🚜 **Cuatriciclo:** L7." },
-        { q: "24. Si un conductor es sancionado con la cancelación definitiva de la licencia de conducir por conducir en estado de ebriedad y causar un accidente (Infracción M.39 del Código de Tránsito, referenciada en el RENAT para inhabilitación), ¿cuándo puede volver a obtener una licencia?", opts: ["a) Después de 3 años.", "b) Nunca (Inhabilitación definitiva).", "c) Después de 5 años.", "d) Después de 10 años.", "e) Después de 1 año si lleva el curso 'Cambiemos de Actitud'."], a: 1, learn: "🍷 **Sanción:** Cancelación definitiva." },
-        { q: "25. Según el Manual de Dispositivos, la señal R-58A (Fondo azul, círculo dividido con un auto a la izquierda y una bicicleta a la derecha) indica:", opts: ["a) Prohibido el paso de bicicletas.", "b) Vía compartida.", "c) Ciclovía exclusiva.", "d) Vía segregada: Motorizados a la izquierda, bicicletas a la derecha.", "e) Cruce de ciclistas."], a: 3, learn: "🚴 **R-58A:** Vía segregada." },
-        { q: "26. Según el RNV, ¿qué vehículos están exonerados del requisito de contar con dispositivo antiempotramiento posterior?", opts: ["a) Todos los camiones N2.", "b) Los remolques O3.", "c) Los vehículos donde la distancia entre el neumático posterior y el borde de la carrocería sea menor a 350 mm (y otras condiciones de altura).", "d) Los vehículos cisternas.", "e) Los volquetes."], a: 2, learn: "📐 **Exonerado:** <350mm altura." },
-        { q: "27. ¿Cuál es la sanción administrativa para una Escuela de Conductores que expida una constancia de finalización del programa sin que el alumno haya cumplido con la carga horaria (Infracción E.02)?", opts: ["a) Multa de 1 UIT.", "b) Suspensión por 30 días.", "c) Multa de 15 UIT + Cancelación de la autorización e inhabilitación definitiva.", "d) Amonestación escrita.", "e) Multa de 5 UIT."], a: 2, learn: "🏫 **Fraude:** 15 UIT + Cancelación." },
-        { q: "28. En el Manual de Dispositivos, las señales de servicios generales de emergencia (como I-13 Primeros Auxilios o I-14 Hospital) tienen una variante en el color de la cruz o símbolo. ¿Cuál es la combinación correcta?", opts: ["a) Fondo azul y cruz blanca.", "b) Fondo azul y cruz roja sobre recuadro blanco (o símbolo rojo).", "c) Fondo blanco y cruz roja.", "d) Fondo verde y cruz blanca.", "e) Fondo rojo y cruz blanca."], a: 1, learn: "🏥 **Cruz:** Roja sobre blanco." },
-        { q: "29. Según el RENAT, la antigüedad máxima de permanencia para un vehículo de transporte de mercancías es:", opts: ["a) 15 años.", "b) 20 años.", "c) 30 años.", "d) 10 años.", "e) No están sujetos a antigüedad máxima, siempre que aprueben la ITV (salvo materiales peligrosos)."], a: 4, learn: "🚛 **Antigüedad:** No sujeto." },
-        { q: "30. ¿Qué indica una línea discontinua (segmentada) que es más ancha de lo normal en una autopista, según las marcas en el pavimento?", opts: ["a) Prohibido el cambio de carril.", "b) Línea de borde de calzada.", "c) Línea de continuidad (indica que el carril se convierte en salida obligatoria o termina).", "d) Zona de estacionamiento.", "e) Separación de flujos opuestos."], a: 2, learn: "🛣️ **Línea Ancha:** Continuidad." },
-        { q: "31. (Reglamento Nacional de Vehículos - RNV): Según el Anexo IV del RNV, existen bonificaciones en los pesos máximos permitidos para vehículos que cuentan con tecnologías específicas que dañan menos el pavimento. Explique detalladamente: ¿Qué porcentaje de bonificación se otorga sobre el Peso Máximo por Eje y sobre el Peso Bruto Vehicular (PBV) a los vehículos equipados con suspensión neumática? Además, ¿qué eje del vehículo está excluido de recibir estas bonificaciones? (Oral)", type: "AUDIO", key: ["10", "5"], learn: "10% Eje, 5% PBV." },
-        { q: "32. (Manual de Dispositivos de Control del Tránsito): Para la implementación de una Rampa de Emergencia (Lecho de Frenado), el Manual exige una demarcación horizontal muy específica en el pavimento para guiar a los vehículos sin frenos. Describa las características técnicas de esta demarcación: ¿De qué color es la línea?, ¿Qué ancho debe tener?, ¿Con qué elemento se refuerza y cada cuántos metros? y ¿A qué distancia mínima del inicio de la rampa debe comenzar dicha línea? (Oral)", type: "AUDIO", key: ["rojo", "1000"], learn: "Roja, 1000m antes." },
-        { q: "33. (Reglamento Nacional de Administración de Transporte - RENAT): El RENAT establece la 'Suspensión Precautoria del Servicio' como una medida preventiva severa. Existe un supuesto específico relacionado con la flota vehicular que detona esta medida de forma inmediata. Explique: ¿Qué porcentaje mínimo de la flota vehicular habilitada debe encontrarse deshabilitada o con suspensión de habilitación (por incumplimiento de condiciones de acceso y permanencia) para que la autoridad proceda a suspender precautoriamente toda la autorización del servicio en la ruta afectada? (Oral)", type: "AUDIO", key: ["30", "treinta"], learn: "30% de la flota." }
+        { q: "21. Limitador de velocidad nacional:", opts: ["90 km/h.", "100 km/h.", "80 km/h.", "120 km/h.", "110 km/h."], a: 0, learn: "🚌 **Limitador:** 90 km/h." },
+        { q: "22. Ancho mínimo Línea de Pare:", opts: ["0.30 m.", "0.40 m.", "0.60 m.", "0.50 m.", "0.25 m."], a: 3, learn: "📏 **Pare:** 0.50 m." },
+        { q: "23. Categoría cuatriciclo carga (450kg):", opts: ["L5.", "L7.", "L6.", "M1.", "N1."], a: 1, learn: "🚜 **Cuatriciclo:** L7." },
+        { q: "24. Licencia tras ebriedad + accidente:", opts: ["3 años.", "Nunca (Definitiva).", "5 años.", "10 años.", "1 año."], a: 1, learn: "🍷 **Sanción:** Cancelación definitiva." },
+        { q: "25. Señal R-58A:", opts: ["No bici.", "Compartida.", "Exclusiva.", "Vía segregada.", "Cruce."], a: 3, learn: "🚴 **R-58A:** Vía segregada." },
+        { q: "26. Exonerados antiempotramiento:", opts: ["N2.", "O3.", "Distancia <350mm.", "Cisternas.", "Volquetes."], a: 2, learn: "📐 **Exonerado:** <350mm altura." },
+        { q: "27. Sanción Escuela fraude horas:", opts: ["1 UIT.", "Suspensión.", "15 UIT + Cancelación.", "Amonestación.", "5 UIT."], a: 2, learn: "🏫 **Fraude:** 15 UIT + Cancelación." },
+        { q: "28. Color cruz emergencia:", opts: ["Azul.", "Azul/Blanco/Roja.", "Blanco/Rojo.", "Verde.", "Rojo."], a: 1, learn: "🏥 **Cruz:** Roja sobre blanco." },
+        { q: "29. Antigüedad carga:", opts: ["15.", "20.", "30.", "10.", "No sujeto."], a: 4, learn: "🚛 **Antigüedad:** No sujeto." },
+        { q: "30. Línea ancha:", opts: ["No cambio.", "Borde.", "Continuidad.", "Est.", "Op."], a: 2, learn: "🛣️ **Línea Ancha:** Continuidad." },
+        { q: "31. Bonif Susp (Oral):", type: "AUDIO", key: ["10", "5"], learn: "10% Eje, 5% PBV." },
+        { q: "32. Rampa (Oral):", type: "AUDIO", key: ["rojo", "1000"], learn: "Roja, 1000m antes." },
+        { q: "33. Susp Precautoria (Oral):", type: "AUDIO", key: ["30", "treinta"], learn: "30% de la flota." }
     ]
 };
 
-// ... (Resto del código IDÉNTICO al anterior, con las correcciones de interfaz) ...
 // ==========================================
 // APP LOGIC
 // ==========================================
@@ -834,22 +707,56 @@ const app = {
 };
 
 // ==========================================
-// MOTOR DEL VIDEOJUEGO (FIXED)
+// MOTOR DEL VIDEOJUEGO (V4.0 con Personalización)
 // ==========================================
 const Game = {
     cvs: null, ctx: null, loopId: null,
-    state: { run: false, x: 0, speed: 0, distance: 0, roadOffset: 0, lights: [], nextLightDist: 1000, enemies: [], trees: [] },
+    
+    // Estado
+    state: {
+        run: false, x: 0, speed: 0, distance: 0, roadOffset: 0,
+        lights: [], nextLightDist: 1000, enemies: [], trees: [],
+    },
+    
+    // Personalización
+    player: { name: 'Conductor', color: '#3b82f6', type: 'sedan', win: '#1e3a8a', light: '#fef08a' },
+
     keys: { left: false, right: false, gas: false, brake: false },
     cfg: { laneW: 100, roadW: 240, maxSpd: 25, accel: 0.3, friction: 0.1, brake: 0.8 },
 
     init: function() {
-        app.nav('v-game'); window.focus();
+        app.nav('v-game');
+        // Mostrar menú de setup
+        document.getElementById('game-setup').style.display = 'flex';
+        document.getElementById('game-layer').style.display = 'none';
+    },
+
+    launch: function() {
+        // Guardar personalización
+        this.player.name = document.getElementById('p-name').value || 'Conductor';
+        this.player.color = document.getElementById('p-color').value;
+        this.player.type = document.getElementById('p-model').value;
+        this.player.win = document.getElementById('p-win').value;
+        this.player.light = document.getElementById('p-light').value;
+
+        document.getElementById('hud-name').innerText = this.player.name;
+        document.getElementById('game-setup').style.display = 'none';
+        document.getElementById('game-layer').style.display = 'flex';
+
+        window.focus();
         Game.cvs = document.getElementById('sim-canvas');
         Game.ctx = Game.cvs.getContext('2d');
-        const resize = () => { const p = Game.cvs.parentElement; Game.cvs.width = p.clientWidth; Game.cvs.height = p.clientHeight; };
+        
+        const resize = () => {
+            const p = Game.cvs.parentElement;
+            Game.cvs.width = p.clientWidth;
+            Game.cvs.height = p.clientHeight;
+        };
         new ResizeObserver(resize).observe(Game.cvs.parentElement);
         resize();
-        Game.bindInputs(); Game.reset();
+
+        Game.bindInputs();
+        Game.reset();
     },
 
     bindInputs: function() {
@@ -916,7 +823,7 @@ const Game = {
         });
         s.enemies = s.enemies.filter(e => e.y < Game.cvs.height + 200);
 
-        if(Math.random() < 0.1) s.trees.push({ y: -100, side: Math.random()>0.5 ? -1 : 1 });
+        if(Math.random() < 0.15) s.trees.push({ y: -100, side: Math.random()>0.5 ? -1 : 1 });
         s.trees.forEach(t => t.y += s.speed); s.trees = s.trees.filter(t => t.y < Game.cvs.height + 100);
 
         document.getElementById('hud-spd').innerText = Math.floor(s.speed * 8);
@@ -927,7 +834,14 @@ const Game = {
         const ctx = Game.ctx; const w = Game.cvs.width; const h = Game.cvs.height;
         const s = Game.state; const c = Game.cfg; const cx = w/2;
 
+        // Fondo césped detallado
         ctx.fillStyle = '#064e3b'; ctx.fillRect(0,0,w,h);
+        // Textura césped (strips)
+        ctx.fillStyle = '#065f46';
+        for(let i=0; i<h; i+=40) {
+            if((i + Math.floor(s.distance)) % 80 < 40) ctx.fillRect(0, i, w, 40);
+        }
+
         const rx = cx - c.roadW/2;
         ctx.fillStyle = '#334155'; ctx.fillRect(rx, 0, c.roadW, h);
         ctx.fillStyle = '#fff'; ctx.fillRect(rx+5, 0, 5, h); ctx.fillRect(rx+c.roadW-10, 0, 5, h);
@@ -936,10 +850,16 @@ const Game = {
         ctx.setLineDash([30, 40]); ctx.lineDashOffset = -s.roadOffset;
         ctx.moveTo(cx, -50); ctx.lineTo(cx, h+50); ctx.stroke(); ctx.setLineDash([]);
 
-        ctx.fillStyle = '#022c22';
+        // Árboles Mejorados
         s.trees.forEach(t => {
-            const tx = t.side===-1 ? rx - 40 : rx + c.roadW + 40;
-            ctx.beginPath(); ctx.arc(tx, t.y, 20, 0, Math.PI*2); ctx.fill();
+            const tx = t.side===-1 ? rx - 50 : rx + c.roadW + 50;
+            // Sombra
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(tx+5, t.y+5, 25, 0, Math.PI*2); ctx.fill();
+            // Tronco
+            ctx.fillStyle = '#451a03'; ctx.fillRect(tx-5, t.y-10, 10, 10);
+            // Copa
+            ctx.fillStyle = '#14532d'; ctx.beginPath(); ctx.arc(tx, t.y-15, 20, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.arc(tx-5, t.y-20, 15, 0, Math.PI*2); ctx.fill();
         });
 
         s.lights.forEach(l => {
@@ -963,17 +883,37 @@ const Game = {
             ctx.restore();
         });
 
+        // JUGADOR PERSONALIZADO
+        const p = Game.player;
         const py = h - 120;
         ctx.save(); ctx.translate(s.x, py);
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(-14, -20, 28, 55);
-        ctx.fillStyle = '#3b82f6'; ctx.fillRect(-15,-25,30,50);
-        ctx.fillStyle = '#1e3a8a'; ctx.fillRect(-12,-10,24,25);
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(-16, -22, 32, 58);
+        
+        // Cuerpo según tipo
+        ctx.fillStyle = p.color;
+        if(p.type === 'sport') {
+            ctx.fillRect(-18, -25, 36, 50); // Ancho
+        } else if(p.type === 'suv') {
+            ctx.fillRect(-16, -30, 32, 60); // Largo
+        } else {
+            ctx.fillRect(-15, -25, 30, 50); // Sedán normal
+        }
+
+        // Techo/Parabrisas
+        ctx.fillStyle = p.win; 
+        ctx.fillRect(-12,-10,24,25);
+
+        // Luces Traseras
         ctx.fillStyle = Game.keys.brake ? '#ff0000' : '#7f1d1d';
         ctx.shadowColor = Game.keys.brake ? '#ff0000' : 'transparent'; ctx.shadowBlur = Game.keys.brake?20:0;
         ctx.fillRect(-13, 22, 8, 5); ctx.fillRect(5, 22, 8, 5); ctx.shadowBlur=0;
-        ctx.fillStyle = '#fef08a'; ctx.globalAlpha = 0.2;
+
+        // Luces Delanteras (Proyectadas)
+        ctx.fillStyle = p.light; ctx.globalAlpha = 0.3;
         ctx.beginPath(); ctx.moveTo(-10, -25); ctx.lineTo(-40, -150); ctx.lineTo(0, -150); ctx.fill();
         ctx.beginPath(); ctx.moveTo(10, -25); ctx.lineTo(40, -150); ctx.lineTo(0, -150); ctx.fill();
+        
         ctx.globalAlpha = 1; ctx.restore();
     },
 
